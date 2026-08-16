@@ -1,0 +1,17 @@
+name = "reel-recipes-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Workers AI. Binds to your own Cloudflare account — no third-party API key.
+# Free allowance is 10,000 Neurons/day and HARD-STOPS with an error rather
+# than billing (NFR-1.3). A caption parse costs ~98 Neurons.
+[ai]
+binding = "AI"
+
+[vars]
+# Comma-separated origins allowed to call this Worker. Leave empty for local
+# development; set it to your Pages URL before deploying.
+ALLOWED_ORIGINS = ""
+
+[observability]
+enabled = true

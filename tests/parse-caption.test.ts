@@ -1,0 +1,181 @@
+import { describe, it, expect } from 'vitest';
+import { parseCaption, parseIngredientLine } from '../src/lib/parse-caption';
+import fixtures from './fixtures/captions.json';
+
+/**
+ * Regression tests over REAL captions pulled from Instagram (see
+ * tests/fixtures/captions.json). When the parser breaks on a new format, add
+ * the caption here rather than debugging from memory.
+ *
+ * These assert the local regex parser (Tier 1b) — the offline fallback used
+ * when Workers AI is unavailable or its daily allowance is spent. It is
+ * expected to be weaker than the LLM path; these tests pin what it does get
+ * right so a change cannot silently regress it.
+ */
+
+const f = fixtures as Record<
+  string,
+  { caption: string; creatorHandle: string; displayName: string }
+>;
+
+describe('the qualifying rule (FR-2.3)', () => {
+  it('ingredients without a method is PARTIAL, not complete', () => {
+    // @chefvpnjadhav — "Ingredients-" then a bare list, no method at all.
+    const r = parseCaption(f['DUAkiKKDPER']!.caption);
+    expect(r.outcome).toBe('partial');
+    expect(r.ingredients.length).toBeGreaterThanOrEqual(2);
+    expect(r.steps).toHaveLength(0);
+  });
+
+  it('returns none for a caption that is only a hashtag wall', () => {
+    // @studiobyferi — "enjoy xo" plus 16 hashtags. Must NOT invent a recipe.
+    const r = parseCaption(f['DM6uxd6g3UI']!.caption);
+    expect(r.outcome).toBe('none');
+    expect(r.ingredients).toHaveLength(0);
+    expect(r.steps).toHaveLength(0);
+  });
+
+  it('qualifies a caption with both ingredients and a method', () => {
+    const r = parseCaption(f['DROuylukbH2']!.caption);
+    expect(r.outcome).toBe('complete');
+    expect(r.ingredients.length).toBeGreaterThanOrEqual(2);
+    expect(r.steps.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('real caption: Bachelor Chicken Peratal (@sainus_diary)', () => {
+  const r = parseCaption(f['DROuylukbH2']!.caption);
+
+  it('takes the dish name as the title, not the emoji line', () => {
+    expect(r.title).toContain('Bachelor Chicken Peratal');
+  });
+
+  it('parses "Coriander seeds – 1 tbsp" item-first with a dash', () => {
+    const ing = r.ingredients.find((i) => /coriander seeds/i.test(i.item));
+    expect(ing).toMatchObject({ quantity: 1, unit: 'tbsp' });
+  });
+
+  it('parses the ½ fraction glyph', () => {
+    const ing = r.ingredients.find((i) => /red chilli powder/i.test(i.item));
+    expect(ing?.quantity).toBe(0.5);
+  });
+
+  it('does not treat "For Masala Paste:" as an ingredient', () => {
+    expect(r.ingredients.some((i) => /^for\b/i.test(i.item))).toBe(false);
+  });
+
+  it('keeps numbered steps as separate steps', () => {
+    expect(r.steps.length).toBeGreaterThanOrEqual(4);
+    expect(r.steps.some((s) => /grind/i.test(s))).toBe(true);
+    expect(r.steps.some((s) => /marinate/i.test(s))).toBe(true);
+  });
+
+  it('drops the trailing hashtag wall from the steps', () => {
+    expect(r.steps.some((s) => s.includes('#'))).toBe(false);
+  });
+
+  it('does not leak an ingredient line into the steps', () => {
+    // Regression: "Water – 2–3 tbsp (to grind)" used to flip the parser into
+    // method mode because "grind" appeared inside the parenthetical note.
+    expect(r.steps.some((s) => /^Water\s*[–-]/.test(s))).toBe(false);
+  });
+});
+
+describe('real caption: Spicy lemon coriander chicken (@chefvpnjadhav)', () => {
+  const r = parseCaption(f['DUAkiKKDPER']!.caption);
+
+  it('recognises the "Ingredients-" heading with a trailing hyphen', () => {
+    // Regression: the heading regex only allowed a colon, so this whole
+    // caption parsed as nothing.
+    expect(r.ingredients.length).toBe(8);
+  });
+
+  it('keeps unquantified ingredients', () => {
+    expect(r.ingredients.map((i) => i.item)).toContain('Oil');
+    expect(r.ingredients.map((i) => i.item)).toContain('Salt');
+  });
+
+  it('strips hashtags from the ingredient list', () => {
+    expect(r.ingredients.some((i) => i.item.includes('#'))).toBe(false);
+  });
+});
+
+describe('promotional noise', () => {
+  it('drops long call-to-action lines rather than treating them as steps', () => {
+    // Regression: "Save this recipe and try it today! ... follow @handle"
+    // exceeded the old 40-char cap and became a method step.
+    const r = parseCaption(f['DbDdLfHIP3q']!.caption);
+    expect(r.steps.some((s) => /save this recipe|don.?t forget|follow @/i.test(s))).toBe(false);
+  });
+
+  it('ignores a "recipe below 👇" preamble', () => {
+    const r = parseCaption('Recipe below 👇\n\nIngredients:\n2 eggs\n1 cup flour\n\nMethod:\nMix well.');
+    expect(r.outcome).toBe('complete');
+    expect(r.ingredients).toHaveLength(2);
+    expect(r.steps).toHaveLength(1);
+  });
+});
+
+describe('parseIngredientLine', () => {
+  it('parses quantity-first with a unit', () => {
+    expect(parseIngredientLine('500 gm chicken')).toMatchObject({
+      quantity: 500,
+      unit: 'gm',
+      item: 'chicken',
+    });
+  });
+
+  it('parses item-first with a dash', () => {
+    expect(parseIngredientLine('Black pepper – 1 tsp')).toMatchObject({
+      quantity: 1,
+      unit: 'tsp',
+      item: 'Black pepper',
+    });
+  });
+
+  it('takes the lower bound of a range', () => {
+    expect(parseIngredientLine('2-3 tbsp oil')?.quantity).toBe(2);
+  });
+
+  it('handles a mixed fraction', () => {
+    expect(parseIngredientLine('1 1/2 cups flour')?.quantity).toBe(1.5);
+  });
+
+  it('keeps a non-numeric amount as text', () => {
+    expect(parseIngredientLine('Salt – as needed')).toMatchObject({
+      quantityText: 'as needed',
+      item: 'Salt',
+    });
+  });
+
+  it('splits a trailing qualifier into a note', () => {
+    expect(parseIngredientLine('2 onions, thinly sliced')).toMatchObject({
+      quantity: 2,
+      item: 'onions',
+      note: 'thinly sliced',
+    });
+  });
+
+  it('keeps a parenthetical as a note', () => {
+    const r = parseIngredientLine('Water – 2 tbsp (to grind)');
+    expect(r?.note).toBe('to grind');
+    expect(r?.item).toBe('Water');
+  });
+
+  it('handles an ingredient with no quantity at all', () => {
+    expect(parseIngredientLine('Garlic')).toMatchObject({ item: 'Garlic' });
+  });
+
+  it('strips bullet glyphs', () => {
+    expect(parseIngredientLine('• 1 tsp cumin')).toMatchObject({
+      quantity: 1,
+      unit: 'tsp',
+      item: 'cumin',
+    });
+    expect(parseIngredientLine('🔸 2 eggs')).toMatchObject({ quantity: 2, item: 'eggs' });
+  });
+
+  it('returns null for an empty line', () => {
+    expect(parseIngredientLine('   ')).toBeNull();
+  });
+});
