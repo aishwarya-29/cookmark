@@ -1,0 +1,11 @@
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: {
+    host: true, // expose on LAN so the phone can reach the dev server
+    port: 5173,
+  },
+  build: {
+    target: 'es2022',
+  },
+});
