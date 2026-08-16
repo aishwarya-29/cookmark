@@ -242,6 +242,242 @@ button.subtle {
   border-radius: var(--radius);
 }
 
+/* --- Shared bits --- */
+
+.dim {
+  color: var(--text-dim);
+}
+.small {
+  font-size: 0.8125rem;
+}
+
+a.back,
+.card-link {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.card-link {
+  color: var(--text);
+  display: block;
+}
+a.back:hover {
+  text-decoration: underline;
+}
+
+h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 24px 0 8px;
+}
+
+label {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  margin: 16px 0 6px;
+}
+
+input[type='text'],
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+
+.library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attribution {
+  margin: 4px 0;
+  font-size: 0.9375rem;
+}
+.attribution a {
+  color: var(--accent);
+}
+
+.plain-list,
+.step-list {
+  padding-left: 20px;
+  margin: 0;
+}
+.plain-list {
+  list-style: disc;
+}
+.plain-list li,
+.step-list li {
+  margin-bottom: 8px;
+}
+
+.note-partial {
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+/* A link-only entry is a valid outcome — inviting, not apologetic. */
+.invitation {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 20px 0;
+}
+.invitation p {
+  margin: 0 0 6px;
+}
+
+.raw-caption {
+  margin-top: 20px;
+  font-size: 0.875rem;
+}
+.raw-caption pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.notice.offer {
+  background: var(--surface-raised);
+  border: 1px solid var(--accent);
+}
+.offer-url {
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  margin: 4px 0 0;
+}
+
+/* --- Cook mode (FR-4.2, NFR-5.2) ---
+ * Larger type for arm's-length reading, 48px+ targets everywhere, and no
+ * interaction that depends on a swipe.
+ */
+
+body.cooking {
+  --touch: 56px;
+}
+body.cooking #app {
+  padding-bottom: 32px;
+}
+
+.cook-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.cook-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cook-ingredients {
+  margin-bottom: 20px;
+}
+.cook-ingredients summary {
+  min-height: var(--touch);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.check-list .check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  text-align: left;
+  font-size: 1.0625rem;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.check-list .check.checked {
+  color: var(--text-dim);
+  text-decoration: line-through;
+  background: var(--surface-raised);
+}
+.check .tick {
+  flex: 0 0 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.step-counter {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  margin: 0 0 8px;
+}
+
+.cook-step {
+  font-size: 1.375rem;
+  line-height: 1.45;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 140px;
+}
+.cook-step.done {
+  color: var(--text-dim);
+}
+
+.cook-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.cook-nav button {
+  flex: 1;
+  min-height: var(--touch);
+  font-size: 1rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

@@ -119,6 +119,14 @@ export interface Recipe {
   /** Fields the user has hand-edited. Protected from re-extraction (FR-2.10). */
   manuallyEditedFields?: string[];
 
+  // --- Cook-mode progress (FR-4.2 — survives an accidental app switch) ---
+  /** Indices of ingredients ticked off. */
+  checkedIngredients?: number[];
+  /** Indices of steps ticked off. */
+  checkedSteps?: number[];
+  /** Step the user was last on, so cook mode resumes where they left it. */
+  currentStep?: number;
+
   // --- Timestamps ---
   savedAt: number;
   updatedAt: number;

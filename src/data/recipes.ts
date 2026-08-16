@@ -78,6 +78,41 @@ export async function saveReelUrl(
   return { kind: 'saved', recipe };
 }
 
+/**
+ * Create a recipe by hand, with no reel attached — the "my grandmother's
+ * recipe" case (FR-2.10). Given a synthetic sourceUrl so the unique index
+ * still applies and nothing downstream has to special-case a missing URL.
+ */
+export async function createManualRecipe(
+  title: string,
+  db: ReelRecipesDb = defaultDb,
+): Promise<Recipe> {
+  const now = Date.now();
+  const recipe: Recipe = {
+    id: newId(),
+    title: title.trim() || 'Untitled recipe',
+    sourceUrl: `manual:${newId()}`,
+    extractionMethod: 'manual',
+    status: 'complete',
+    extractionState: 'settled',
+    attempts: [],
+    ingredients: [],
+    steps: [],
+    // Everything here is the user's own work — protect all of it from any
+    // future re-extraction.
+    manuallyEditedFields: ['title', 'ingredients', 'steps'],
+    savedAt: now,
+    updatedAt: now,
+  };
+  await db.recipes.add(recipe);
+  return recipe;
+}
+
+/** True for recipes with no real reel behind them. */
+export function isManual(r: Recipe): boolean {
+  return r.sourceUrl.startsWith('manual:');
+}
+
 /** Library listing, newest first (FR-3.1). */
 export async function listRecipes(db: ReelRecipesDb = defaultDb): Promise<Recipe[]> {
   return db.recipes.orderBy('savedAt').reverse().toArray();
