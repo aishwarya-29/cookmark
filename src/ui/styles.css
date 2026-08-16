@@ -211,6 +211,22 @@ button.subtle {
   border: 1px solid var(--border);
 }
 
+/*
+ * Status badges. The default badge is deliberately neutral — link-only saves
+ * use it, and they are a valid outcome, not a failure. No red, no warning
+ * colour, no error icon anywhere in this file for that state.
+ */
+.badge.good {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.badge.working {
+  color: var(--text-dim);
+  border-style: dashed;
+}
+
 .card-actions {
   margin-top: 10px;
   display: flex;
