@@ -73,8 +73,20 @@ function cardHtml(r: Recipe): string {
   if (r.ingredients?.length) counts.push(`${r.ingredients.length} ingredients`);
   if (r.steps?.length) counts.push(`${r.steps.length} steps`);
 
+  // The thumbnail is the content: you remember reels as "the one with the
+  // orange sauce". Lazy so a long library doesn't fetch everything at once,
+  // and the card degrades cleanly when it's missing (private post, offline).
+  const thumb = r.thumbnailUrl
+    ? `<a class="card-thumb" href="#/recipe/${r.id}" tabindex="-1" aria-hidden="true">
+         <img src="${escapeHtml(r.thumbnailUrl)}" alt="" loading="lazy"
+              referrerpolicy="no-referrer"
+              onerror="this.closest('.card-thumb').remove()" />
+       </a>`
+    : '';
+
   return `
-    <li class="card">
+    <li class="card ${r.thumbnailUrl ? 'has-thumb' : ''}">
+      ${thumb}
       <a class="card-link" href="#/recipe/${r.id}">
         <p class="card-title">${escapeHtml(r.title)}</p>
       </a>
@@ -85,13 +97,24 @@ function cardHtml(r: Recipe): string {
         ${statusBadge(r)}
         ${r.unresolvedShareLink ? '<span class="badge">share link — resolves later</span>' : ''}
       </div>
-      ${counts.length ? `<p class="dim small">${counts.join(' · ')}</p>` : ''}
       ${
-        r.cuisine || r.mealType || r.tags?.length
+        counts.length || r.cuisine || r.mealType
+          ? `<p class="card-facts">${[
+              r.cuisine,
+              r.mealType,
+              ...counts,
+            ]
+              .filter(Boolean)
+              .map((c) => escapeHtml(c as string))
+              .join(' · ')}</p>`
+          : ''
+      }
+      ${
+        r.tags?.length
           ? `<div class="chip-row">
-               ${[r.cuisine, r.mealType, ...(r.tags ?? [])]
-                 .filter(Boolean)
-                 .map((c) => `<span class="chip small-chip">${escapeHtml(c!)}</span>`)
+               ${r.tags
+                 .slice(0, 3)
+                 .map((t) => `<span class="chip small-chip">${escapeHtml(t)}</span>`)
                  .join('')}
              </div>`
           : ''

@@ -55,43 +55,43 @@ function chip(label: string, attr: string, active: boolean, count?: number): str
 }
 
 export function searchPanelHtml(recipes: Recipe[], s: SearchState): string {
+  // Nothing to search on first run — the empty state should teach the paste
+  // flow in one glance (PRD §11 Q5), not present tools with no purpose yet.
+  if (recipes.length < 2) return '';
+
   const cuisines = distinctValues(recipes, 'cuisine');
   const meals = distinctValues(recipes, 'mealType');
   const tags = allTags(recipes);
 
-  const filterRows: string[] = [];
-
-  if (cuisines.length) {
-    filterRows.push(`
-      <div class="chip-row">
-        ${cuisines
-          .map((c) => chip(c, `data-filter="cuisine" data-value="${escapeHtml(c)}"`, s.cuisine === c))
-          .join('')}
-      </div>`);
-  }
-  if (meals.length) {
-    filterRows.push(`
-      <div class="chip-row">
-        ${meals
-          .map((m) =>
-            chip(m, `data-filter="mealType" data-value="${escapeHtml(m)}"`, s.mealType === m),
-          )
-          .join('')}
-      </div>`);
-  }
-  if (tags.length) {
-    filterRows.push(`
-      <div class="chip-row">
-        ${tags
-          .slice(0, 12)
-          .map((t) =>
-            chip(t.tag, `data-filter="tag" data-value="${escapeHtml(t.tag)}"`, s.tag === t.tag, t.count),
-          )
-          .join('')}
-      </div>`);
-  }
-
   const activeCount = [s.cuisine, s.mealType, s.tag].filter(Boolean).length;
+
+  // All filters live in one scrollable row rather than three stacked rows.
+  // Three rows of chips pushed the library below the fold, which inverts the
+  // priority: the recipes are the point, the filters are a tool.
+  const allChips = [
+    ...cuisines.map((c) =>
+      chip(c, `data-filter="cuisine" data-value="${escapeHtml(c)}"`, s.cuisine === c),
+    ),
+    ...meals.map((m) =>
+      chip(m, `data-filter="mealType" data-value="${escapeHtml(m)}"`, s.mealType === m),
+    ),
+    ...tags
+      .slice(0, 10)
+      .map((t) =>
+        chip(t.tag, `data-filter="tag" data-value="${escapeHtml(t.tag)}"`, s.tag === t.tag, t.count),
+      ),
+  ];
+
+  // Anything selected stays visible; the rest hide behind a disclosure so the
+  // resting state is calm.
+  const filterRows = allChips.length
+    ? `<details class="filters" ${activeCount ? 'open' : ''}>
+         <summary>
+           Filter${activeCount ? ` · ${activeCount} on` : ''}
+         </summary>
+         <div class="chip-scroll">${allChips.join('')}</div>
+       </details>`
+    : '';
 
   return `
     <div class="search-panel">
@@ -105,7 +105,7 @@ export function searchPanelHtml(recipes: Recipe[], s: SearchState): string {
                value="${escapeHtml(s.cookWith)}" aria-label="Ingredients you have" />
       </details>
 
-      ${filterRows.join('')}
+      ${filterRows}
       ${
         activeCount || s.text || s.cookWith
           ? `<button class="subtle" data-action="clear-filters">Clear${

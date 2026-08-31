@@ -1,41 +1,83 @@
 /*
- * All styling lives in this one file so a design system can be dropped in later
- * without touching logic. Deliberately plain — legibility, not decoration.
+ * Reel Recipes — design system.
+ *
+ * All styling lives in this one file; logic never carries visual decisions.
+ *
+ * Three ideas govern everything here:
+ *
+ * 1. WARM, NOT NEUTRAL. Cooking happens in a warm-lit kitchen in the evening.
+ *    Every grey is shifted toward red, and no pure #000 or #FFF appears.
+ *
+ * 2. STATUS IS TYPOGRAPHIC, NOT CHROMATIC. A link-only save is a valid
+ *    outcome (PRD §11 Q2), so semantic red/amber/green pills are deliberately
+ *    absent — they would make a legitimate outcome read as failure by
+ *    contrast. Weight and wording carry status; colour is reserved.
+ *
+ * 3. THE FOOD IS THE COLOUR. Thumbnails are saturated already, so the chrome
+ *    recedes and lets them carry the page.
  */
 
 :root {
-  --bg: #111214;
-  --surface: #1a1c1f;
-  --surface-raised: #232629;
-  --border: #2e3236;
-  --text: #e8eaed;
-  --text-dim: #9aa0a6;
-  --text-faint: #6b7075;
-  --accent: #7cc4a4;
-  --accent-text: #0d1f17;
-  --warn: #d9a441;
-  --danger: #e57373;
+  /* --- Warm dark: a kitchen at 8pm, not a dashboard --- */
+  --bg: #12100e;
+  --bg-elevated: #1c1917;
+  --surface: #1c1917;
+  --surface-raised: #292524;
+  --border: #302b28;
+  --border-strong: #44403c;
 
-  --radius: 10px;
-  --gap: 12px;
-  --touch: 48px; /* NFR-5.2 — minimum touch target */
+  --text: #f5f1eb;
+  --text-dim: #a8a29e;
+  --text-faint: #78716c;
+
+  /* Burnt orange — a browned onion, a crust. Not tomato red (every recipe
+     app), not success green (would shame link-only saves by contrast). */
+  --accent: #e8845a;
+  --accent-quiet: #3a241a;
+  --accent-text: #1a0f09;
+
+  --danger: #e88a7d;
+
+  /* Type scale — 1.2 ratio, compressed for dense library scanning. */
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.0625rem;
+  --step-2: 1.25rem;
+  --step-3: 1.5rem;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --gap: 14px;
+  --touch: 48px; /* NFR-5.2 minimum */
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.5);
+
+  --ease: cubic-bezier(0.2, 0, 0.1, 1);
 
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #fbfbfa;
+    --bg: #fdfcfa;
+    --bg-elevated: #ffffff;
     --surface: #ffffff;
-    --surface-raised: #f2f2f0;
-    --border: #dcdcd8;
-    --text: #1a1c1f;
-    --text-dim: #5f6368;
-    --text-faint: #8a8f94;
-    --accent: #2f7d5c;
+    --surface-raised: #f5f2ee;
+    --border: #e7e1da;
+    --border-strong: #d3cabf;
+
+    --text: #1c1917;
+    --text-dim: #57534e;
+    --text-faint: #8a8177;
+
+    --accent: #c2571f;
+    --accent-quiet: #fdf0e8;
     --accent-text: #ffffff;
-    --warn: #9a6b12;
-    --danger: #b3261e;
+
+    --danger: #b3402c;
+
+    --shadow: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px -14px rgb(28 25 23 / 0.18);
+
     color-scheme: light;
   }
 }
@@ -44,123 +86,446 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: var(--step-0);
+  line-height: 1.55;
   /* Respect the notch on an installed PWA. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
-  max-width: 680px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 20px 16px 64px;
+  padding: 24px 16px 80px;
 }
 
+/* --- Headings --- */
+
 h1 {
-  font-size: 1.25rem;
+  font-size: var(--step-3);
+  font-weight: 640;
+  letter-spacing: -0.021em;
+  line-height: 1.2;
+  margin: 0 0 2px;
+}
+
+h2 {
+  font-size: var(--step--1);
   font-weight: 600;
-  letter-spacing: -0.01em;
-  margin: 0 0 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 32px 0 10px;
 }
 
 .subtitle {
   color: var(--text-dim);
-  font-size: 0.875rem;
-  margin: 0 0 24px;
+  font-size: var(--step-0);
+  margin: 0 0 22px;
 }
 
-/* --- Paste bar (FR-1.1) — the app's front door --- */
-
-.paste-form {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+.dim {
+  color: var(--text-dim);
+}
+.small {
+  font-size: var(--step--1);
 }
 
-.paste-form input {
-  flex: 1;
-  min-width: 0;
-  min-height: var(--touch);
-  padding: 0 14px;
-  font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
+/* --- Controls --- */
+
+input[type='text'],
+input[type='search'],
+textarea {
+  width: 100%;
+  padding: 13px 15px;
+  font: inherit;
+  font-size: 16px; /* below 16px triggers iOS zoom-on-focus */
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
-.paste-form input:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-faint);
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.6;
 }
 
 button {
   min-height: var(--touch);
   padding: 0 18px;
   font: inherit;
-  font-weight: 500;
+  font-size: var(--step-0);
+  font-weight: 560;
   color: var(--accent-text);
   background: var(--accent);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: opacity 0.15s var(--ease), transform 0.08s var(--ease);
+}
+
+button:active {
+  transform: scale(0.985);
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 
 button.subtle {
   color: var(--text-dim);
   background: transparent;
-  border: 1px solid var(--border);
-  padding: 0 12px;
-  min-height: 36px;
+  border: 1px solid var(--border-strong);
+  min-height: 40px;
+  padding: 0 14px;
+  font-weight: 500;
 }
 
-/* --- Feedback line under the paste bar --- */
+button.subtle:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+label {
+  display: block;
+  font-size: var(--step--1);
+  font-weight: 560;
+  color: var(--text-dim);
+  margin: 20px 0 7px;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+a.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: var(--step-0);
+}
+a.back:hover {
+  color: var(--text);
+}
+
+.action-row {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* --- Paste bar: the app's front door (FR-1.1) --- */
+
+.paste-form {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.paste-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch);
+  padding: 0 15px;
+}
+
+/* --- Notices --- */
 
 .notice {
-  font-size: 0.875rem;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  margin-bottom: 16px;
-}
-
-.notice.info {
-  color: var(--text-dim);
-  background: var(--surface);
+  font-size: var(--step-0);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
   border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  animation: slide-in 0.22s var(--ease);
 }
 
-/* Duplicate is reassuring, not an error (FR-2.2) — deliberately not red. */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Duplicate is reassuring, not an error (FR-2.2) — no red anywhere. */
 .notice.duplicate {
   color: var(--text);
   background: var(--surface-raised);
-  border: 1px solid var(--border);
 }
 
 .notice.error {
   color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 28%, transparent);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
 }
 
-/* --- Library list --- */
+.notice.offer {
+  background: var(--accent-quiet);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
+}
+.offer-url {
+  overflow-wrap: anywhere;
+  font-size: var(--step--1);
+  color: var(--text-dim);
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Search and filters --- */
+
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0 6px;
+}
+
+.search-panel input {
+  min-height: var(--touch);
+  padding: 0 15px;
+}
+
+.cook-with {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  background: var(--surface);
+}
+.cook-with[open] {
+  padding-bottom: 14px;
+}
+.cook-with summary {
+  min-height: var(--touch);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 560;
+  list-style: none;
+}
+.cook-with summary::-webkit-details-marker {
+  display: none;
+}
+.cook-with summary::after {
+  content: '＋';
+  margin-left: auto;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+.cook-with[open] summary::after {
+  content: '−';
+}
+.cook-with p {
+  margin: 0 0 10px;
+}
+
+/*
+ * Filters collapse by default. Three stacked rows of chips pushed the library
+ * below the fold, which inverts the priority — the recipes are the point.
+ */
+.filters {
+  margin-top: -2px;
+}
+.filters summary {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  list-style: none;
+}
+.filters summary::-webkit-details-marker {
+  display: none;
+}
+.filters summary::after {
+  content: '⌄';
+  margin-left: 7px;
+  font-size: 1rem;
+  transform: translateY(-2px);
+}
+.filters[open] summary::after {
+  content: '⌃';
+  transform: translateY(2px);
+}
+
+/* One horizontally-scrolling row rather than a growing wall of chips. */
+.chip-scroll {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 4px 16px 8px;
+  margin: 0 -16px;
+  scrollbar-width: none;
+  scroll-padding: 16px;
+}
+.chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+.chip-scroll .chip {
+  flex: 0 0 auto;
+}
+
+/* --- Chips --- */
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 10px 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  font-size: var(--step--1);
+  font-weight: 500;
+  padding: 7px 13px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: default;
+  transition: all 0.15s var(--ease);
+}
+
+button.chip {
+  cursor: pointer;
+}
+button.chip:hover {
+  border-color: var(--text-faint);
+  color: var(--text);
+}
+
+.chip.filter.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.chip.filter.active:hover {
+  color: var(--accent-text);
+}
+
+/* A suggestion is an offer, not an assertion (FR-3.7). */
+.chip.suggest {
+  border-style: dashed;
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: transparent;
+}
+.chip.suggest:hover {
+  background: var(--accent-quiet);
+  color: var(--accent);
+}
+
+.chip.dismiss,
+.chip.add {
+  color: var(--text-faint);
+  background: transparent;
+  border-style: dashed;
+}
+
+.chip-x {
+  min-height: auto;
+  padding: 0 1px;
+  margin-left: 1px;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--text-faint);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.chip-x:hover {
+  color: var(--text);
+}
+
+.small-chip {
+  font-size: 0.75rem;
+  padding: 3px 9px;
+  min-height: auto;
+}
+
+.suggestions {
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-quiet);
+}
+.suggestions p {
+  margin: 0;
+}
+.suggestions .chip-row {
+  margin-bottom: 0;
+}
+
+/* --- Library --- */
+
+.library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 28px 0 12px;
+}
 
 .section-label {
-  font-size: 0.75rem;
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-faint);
-  margin: 24px 0 10px;
+  margin: 0;
 }
 
 .card-list {
@@ -173,186 +538,259 @@ button.subtle {
 }
 
 .card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: 15px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s var(--ease), transform 0.12s var(--ease);
+  animation: card-in 0.28s var(--ease) backwards;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+}
+
+/*
+ * Thumbnail bleeds to the card edges — the reel is what you remember, so it
+ * should read as the image it was in Instagram, not a boxed-in avatar.
+ */
+.card.has-thumb {
+  padding-top: 0;
+  overflow: hidden;
+}
+.card-thumb {
+  display: block;
+  margin: 0 -15px 14px;
+  aspect-ratio: 16 / 10;
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-link {
+  display: block;
+  color: var(--text);
+  text-decoration: none;
 }
 
 .card-title {
-  font-weight: 500;
-  margin: 0 0 6px;
+  font-size: var(--step-1);
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  line-height: 1.3;
+  margin: 0 0 7px;
   overflow-wrap: anywhere;
 }
 
-/* Attribution — permanent and always visible (NFR-4.2) */
 .card-meta {
-  font-size: 0.8125rem;
-  color: var(--text-dim);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
+  font-size: var(--step--1);
+  color: var(--text-dim);
 }
 
 .card-meta a {
   color: var(--text-dim);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-strong);
 }
-
-.badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--surface-raised);
-  color: var(--text-dim);
-  border: 1px solid var(--border);
+.card-meta a:hover {
+  color: var(--text);
 }
 
 /*
- * Status badges. The default badge is deliberately neutral — link-only saves
- * use it, and they are a valid outcome, not a failure. No red, no warning
- * colour, no error icon anywhere in this file for that state.
+ * Status badges. Deliberately monochrome: a link-only save is a legitimate
+ * outcome and must not read as a failure next to a "successful" one. Weight
+ * and wording carry the meaning, not hue.
  */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  border: 1px solid transparent;
+}
+
 .badge.good {
   color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-quiet);
 }
 
+/* In-progress: a slow pulse, not a spinner. Extraction takes 9-20s and the
+   save is already durable — this is a status, not a wait. */
 .badge.working {
   color: var(--text-dim);
-  border-style: dashed;
+  animation: pulse 1.9s ease-in-out infinite;
 }
 
-.card-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Cuisine, meal type, and counts on one line — three separate rows of
+   metadata made every card bottom-heavy. */
+.card-facts {
+  font-size: var(--step--1);
+  color: var(--text-faint);
+  margin: 8px 0 0;
+}
+
+.card .chip-row {
+  margin: 9px 0 0;
+}
+
+.card-meta + .card-meta {
+  margin-top: 9px;
+}
+
+.match-line {
+  font-size: var(--step-0);
+  margin: 5px 0 8px;
+  color: var(--text-dim);
+}
+.match-line strong {
+  color: var(--accent);
+  font-weight: 640;
 }
 
 .empty {
   color: var(--text-dim);
-  font-size: 0.9375rem;
   text-align: center;
-  padding: 40px 20px;
-  border: 1px dashed var(--border);
+  padding: 44px 24px;
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
+  line-height: 1.6;
+}
+.empty p {
+  margin: 0 0 6px;
+}
+.empty p:last-child {
+  margin-bottom: 0;
 }
 
-/* --- Shared bits --- */
-
-.dim {
-  color: var(--text-dim);
-}
-.small {
-  font-size: 0.8125rem;
-}
-
-a.back,
-.card-link {
-  color: var(--text-dim);
-  text-decoration: none;
-}
-.card-link {
-  color: var(--text);
-  display: block;
-}
-a.back:hover {
-  text-decoration: underline;
-}
-
-h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 24px 0 8px;
-}
-
-label {
-  display: block;
-  font-size: 0.8125rem;
-  color: var(--text-dim);
-  margin: 16px 0 6px;
-}
-
-input[type='text'],
-textarea {
-  width: 100%;
-  padding: 12px 14px;
-  font: inherit;
-  font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  resize: vertical;
-}
-
-.action-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-button.danger {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
-}
-
-.library-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
+/* --- Recipe detail --- */
 
 .attribution {
-  margin: 4px 0;
-  font-size: 0.9375rem;
+  margin: 6px 0;
+  font-size: var(--step-0);
+  color: var(--text-dim);
 }
 .attribution a {
   color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .plain-list,
 .step-list {
-  padding-left: 20px;
+  padding-left: 0;
   margin: 0;
-}
-.plain-list {
-  list-style: disc;
-}
-.plain-list li,
-.step-list li {
-  margin-bottom: 8px;
+  list-style: none;
 }
 
+.plain-list li {
+  padding: 10px 0 10px 20px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.plain-list li::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 20px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.plain-list li:last-child {
+  border-bottom: none;
+}
+
+.step-list {
+  counter-reset: step;
+}
+.step-list li {
+  counter-increment: step;
+  padding: 12px 0 12px 34px;
+  position: relative;
+  line-height: 1.6;
+}
+.step-list li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 640;
+}
+
+/* Partial — a gentle affordance, never an error (PRD §07). */
 .note-partial {
-  font-size: 0.875rem;
+  font-size: var(--step-0);
   color: var(--text-dim);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 16px 0;
 }
 
-/* A link-only entry is a valid outcome — inviting, not apologetic. */
+/* Link-only — an invitation, not an apology (PRD §11 Q2). */
 .invitation {
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
-  padding: 20px;
-  margin: 20px 0;
+  padding: 26px 22px;
+  margin: 22px 0;
+  text-align: center;
 }
 .invitation p {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
+}
+.invitation button {
+  margin-top: 10px;
 }
 
 .raw-caption {
-  margin-top: 20px;
-  font-size: 0.875rem;
+  margin-top: 26px;
+  font-size: var(--step--1);
+}
+.raw-caption summary {
+  cursor: pointer;
+  color: var(--text-faint);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
 .raw-caption pre {
   white-space: pre-wrap;
@@ -360,170 +798,78 @@ button.danger {
   color: var(--text-dim);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-}
-
-.notice.offer {
-  background: var(--surface-raised);
-  border: 1px solid var(--accent);
-}
-.offer-url {
-  overflow-wrap: anywhere;
-  font-size: 0.8125rem;
-  color: var(--text-dim);
-  margin: 4px 0 0;
-}
-
-/* --- Search, filters, and categories (FR-3.2, FR-3.3, FR-3.4, FR-3.6) --- */
-
-.search-panel {
-  margin: 16px 0 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.search-panel input[type='search'],
-.search-panel input[type='text'] {
-  width: 100%;
-  min-height: var(--touch);
-  padding: 0 14px;
-  font: inherit;
-  font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.cook-with summary {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 0.9375rem;
-  color: var(--text);
-}
-
-.cook-with p {
-  margin: 4px 0 8px;
-}
-
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font: inherit;
-  font-size: 0.8125rem;
-  padding: 6px 10px;
-  min-height: 36px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-dim);
-  cursor: default;
-}
-
-button.chip {
-  cursor: pointer;
-}
-
-.chip.filter.active {
-  color: var(--accent-text);
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Suggestions read as an offer, not an assertion (FR-3.7). */
-.chip.suggest {
-  border-style: dashed;
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: transparent;
-}
-
-.chip.dismiss,
-.chip.add {
-  color: var(--text-faint);
-  background: transparent;
-  border-style: dashed;
-}
-
-.chip-x {
-  min-height: auto;
-  padding: 0 2px;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--text-faint);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.small-chip {
-  font-size: 0.75rem;
-  padding: 3px 8px;
-  min-height: auto;
-}
-
-.suggestions {
-  margin: 8px 0 4px;
-}
-.suggestions p {
-  margin: 0;
-}
-
-.match-line {
-  font-size: 0.875rem;
-  margin: 4px 0;
-  color: var(--text-dim);
-}
-.match-line strong {
-  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  margin: 8px 0 0;
 }
 
 /* --- Cook mode (FR-4.2, NFR-5.2) ---
- * Larger type for arm's-length reading, 48px+ targets everywhere, and no
- * interaction that depends on a swipe.
+ *
+ * A different context, not a bigger reading view: arm's length on a propped
+ * phone, wet hands, no swipe-only interactions. Type jumps a full scale step
+ * and every target grows to 56px.
  */
 
 body.cooking {
   --touch: 56px;
+  background: var(--bg);
 }
 body.cooking #app {
-  padding-bottom: 32px;
+  padding: 16px 16px 32px;
+}
+
+/* Wet hands, imprecise taps: NOTHING in cook mode may fall below the 48px
+   floor, including the .subtle exit button that is 40px elsewhere (NFR-5.2). */
+body.cooking button,
+body.cooking button.subtle {
+  min-height: var(--touch);
 }
 
 .cook-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
 }
 .cook-title {
-  font-weight: 600;
+  font-size: var(--step-1);
+  font-weight: 640;
+  letter-spacing: -0.011em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .cook-ingredients {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 .cook-ingredients summary {
   min-height: var(--touch);
   display: flex;
   align-items: center;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: var(--step-1);
+  list-style: none;
+}
+.cook-ingredients summary::-webkit-details-marker {
+  display: none;
+}
+.cook-ingredients summary::after {
+  content: '⌄';
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 1.2rem;
+  line-height: 1;
+  transform: translateY(-3px);
+}
+.cook-ingredients[open] summary::after {
+  content: '⌃';
+  transform: translateY(3px);
 }
 
 .check-list {
@@ -534,67 +880,101 @@ body.cooking #app {
 .check-list .check {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   min-height: var(--touch);
-  padding: 8px 12px;
-  margin-bottom: 6px;
+  padding: 11px 14px;
+  margin-bottom: 7px;
   text-align: left;
   font-size: 1.0625rem;
-  font-weight: 400;
+  font-weight: 450;
+  line-height: 1.4;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
 }
 .check-list .check.checked {
-  color: var(--text-dim);
+  color: var(--text-faint);
+  background: transparent;
+  border-color: var(--border);
+}
+.check-list .check.checked span:last-child {
   text-decoration: line-through;
-  background: var(--surface-raised);
+  text-decoration-color: var(--text-faint);
 }
 .check .tick {
-  flex: 0 0 24px;
-  height: 24px;
+  flex: 0 0 26px;
+  height: 26px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--accent);
-  font-size: 0.875rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: all 0.15s var(--ease);
+}
+.check.checked .tick {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .step-counter {
-  color: var(--text-dim);
-  font-size: 0.875rem;
-  margin: 0 0 8px;
+  color: var(--text-faint);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
 }
 
+/* Arm's-length legibility: 1.4rem, generous leading. */
 .cook-step {
-  font-size: 1.375rem;
-  line-height: 1.45;
-  padding: 20px;
+  font-size: 1.4rem;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-height: 140px;
+  min-height: 150px;
+  box-shadow: var(--shadow);
 }
 .cook-step.done {
-  color: var(--text-dim);
+  color: var(--text-faint);
 }
 
 .cook-nav {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 9px;
+  margin-top: 18px;
 }
 .cook-nav button {
   flex: 1;
   min-height: var(--touch);
-  font-size: 1rem;
+  font-size: var(--step-1);
+}
+.cook-nav button.subtle {
+  flex: 0 0 auto;
+  min-width: 88px;
+}
+
+/* --- Wider screens: more air, never a second column of cards --- */
+
+@media (min-width: 720px) {
+  #app {
+    padding-top: 40px;
+  }
+  h1 {
+    font-size: 1.75rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition: none !important;
   }
