@@ -17,7 +17,13 @@ import {
   isSearchActive, emptySearch, type SearchState,
 } from './ui/search-ui';
 import { allTags } from './lib/search';
-import { headerHtml, tabBarHtml, pasteSheetHtml } from './ui/chrome';
+import { homeHtml } from './ui/home';
+import {
+  listCollections, createCollection, toggleInCollection, deleteCollection,
+  renameCollection, recipesIn,
+} from './data/collections';
+import type { Collection } from './data/types';
+import { headerHtml, tabBarHtml, pasteSheetHtml, collectionPickerHtml } from './ui/chrome';
 
 /**
  * App shell: owns routing, the paste bar, and the single render entry point.
@@ -42,34 +48,53 @@ let cooking = false;
 let search: SearchState = { ...emptySearch };
 /** Whether the paste sheet is open. */
 let sheetOpen = false;
+/** User-defined collections (FR-3.5). */
+let collections: Collection[] = [];
+/** Recipe id whose "add to collection" picker is open, if any. */
+let pickerFor: string | null = null;
 
-function libraryShellHtml(): string {
+function libraryShellHtml(collection?: Collection): string {
   const noticeHtml = notice
     ? `<div class="notice ${notice.tone}">${escapeHtml(notice.text)}</div>`
     : '';
 
+  // Inside a collection, search and filters apply to that collection only.
+  const scope = collection ? recipesIn(collection, recipes) : recipes;
+
   // Ingredient match replaces the normal list when active — a different
   // question deserves a different answer shape.
   const matching = search.cookWith.trim().length > 0;
-  const visible = applyFilters(recipes, search);
+  const visible = applyFilters(scope, search);
   const listHtml = matching
-    ? matchResultsHtml(ingredientMatches(recipes, search))
+    ? matchResultsHtml(ingredientMatches(scope, search))
     : libraryHtml(visible);
 
   const countLabel = isSearchActive(search)
     ? matching
       ? 'What you can cook'
-      : `${visible.length} of ${recipes.length}`
-    : `${recipes.length} saved`;
+      : `${visible.length} of ${scope.length}`
+    : `${scope.length} ${scope.length === 1 ? 'recipe' : 'recipes'}`;
 
   return `
     ${noticeHtml}
-    ${searchPanelHtml(recipes, search)}
+    ${searchPanelHtml(scope, search)}
 
     <div class="library-head">
       <p class="section-label">${escapeHtml(countLabel)}</p>
+      ${
+        collection
+          ? `<button class="subtle" data-action="collection-menu">Edit</button>`
+          : ''
+      }
     </div>
-    ${listHtml}
+    ${
+      collection && !scope.length
+        ? `<div class="empty">
+             <p><strong>Nothing in here yet</strong></p>
+             <p class="dim">Open a recipe and use “add to a collection”.</p>
+           </div>`
+        : listHtml
+    }
   `;
 }
 
@@ -83,10 +108,14 @@ function renderChrome(route: ReturnType<typeof currentRoute>, title: string): vo
     return;
   }
 
-  const back = route.name === 'library' ? undefined : '#/';
+  // Home is the only screen with no back link; everything else returns to it.
+  const back = route.name === 'home' ? undefined : '#/';
   chromeTop.innerHTML = headerHtml(title, back ? { back } : {});
-  chromeBottom.innerHTML = route.name === 'library' ? tabBarHtml('library') : '';
-  sheetRoot.innerHTML = route.name === 'library' ? pasteSheetHtml(sheetOpen, clipboardOffer) : '';
+
+  // The tab bar and paste sheet belong to the browsing screens, not to detail.
+  const browsing = route.name === 'home' || route.name === 'library';
+  chromeBottom.innerHTML = browsing ? tabBarHtml('library') : '';
+  sheetRoot.innerHTML = browsing ? pasteSheetHtml(sheetOpen, clipboardOffer) : '';
 
   onClick(chromeBottom, '[data-tab="add"]', () => {
     sheetOpen = true;
@@ -128,7 +157,30 @@ async function render(): Promise<void> {
     await exitCookMode();
   }
 
+  if (route.name === 'home') {
+    renderChrome(route, 'Reel Recipes');
+    app.innerHTML = homeHtml(recipes, collections);
+    document.body.classList.toggle('sheet-open', sheetOpen);
+
+    onClick(app, '[data-action="new-collection"]', () => void promptNewCollection());
+    onClick(app, '[data-action="open-sheet"]', () => {
+      sheetOpen = true;
+      void render();
+    });
+    return;
+  }
+
   if (route.name === 'library') {
+    const collection = route.collectionId
+      ? collections.find((c) => c.id === route.collectionId)
+      : undefined;
+
+    // A deleted collection should not strand the user on a blank screen.
+    if (route.collectionId && !collection) {
+      navigate('#/');
+      return;
+    }
+
     // Preserve what the user is typing across background refreshes — for every
     // text field on screen, including those in the sheet.
     const FIELDS = ['#url-input', '#search-text', '#cook-with'];
@@ -139,8 +191,8 @@ async function render(): Promise<void> {
         : null;
     });
 
-    renderChrome(route, 'Reel Recipes');
-    app.innerHTML = libraryShellHtml();
+    renderChrome(route, collection ? collection.name : 'All recipes');
+    app.innerHTML = libraryShellHtml(collection);
     document.body.classList.toggle('sheet-open', sheetOpen);
 
     for (const p of preserved) {
@@ -189,6 +241,10 @@ async function render(): Promise<void> {
       void render();
     });
 
+    if (collection) {
+      onClick(app, '[data-action="collection-menu"]', () => void collectionMenu(collection));
+    }
+
     return;
   }
 
@@ -204,7 +260,28 @@ async function render(): Promise<void> {
 
   if (route.name === 'recipe') {
     renderChrome(route, r.title);
-    renderRecipe(app, r, () => void refresh(), allTags(recipes).map((t) => t.tag));
+    renderRecipe(app, r, () => void refresh(), allTags(recipes).map((t) => t.tag), collections);
+
+    // The "add to a collection" picker lives in the sheet slot, which the
+    // detail screen otherwise leaves empty.
+    sheetRoot.innerHTML = collectionPickerHtml(pickerFor === r.id, collections, r.id);
+    document.body.classList.toggle('sheet-open', pickerFor === r.id);
+
+    onClick(app, '[data-action="add-to-collection"]', () => {
+      pickerFor = r.id;
+      void render();
+    });
+    onClick(sheetRoot, '[data-close-picker]', () => {
+      pickerFor = null;
+      void render();
+    });
+    onClick(sheetRoot, '[data-toggle-collection]', async (el) => {
+      await toggleInCollection(el.dataset['toggleCollection']!, r.id);
+      await refresh();
+    });
+    onClick(sheetRoot, '[data-action="new-collection-from-recipe"]', async () => {
+      await promptNewCollection(r.id);
+    });
   } else if (route.name === 'edit') {
     renderChrome(route, 'Edit');
     renderEdit(app, r, () => void refresh());
@@ -218,8 +295,40 @@ async function render(): Promise<void> {
   }
 }
 
+/** Create a collection and drop the user straight into it. */
+async function promptNewCollection(recipeId?: string): Promise<void> {
+  const name = prompt('Name this collection')?.trim();
+  if (!name) return;
+  const c = await createCollection(name);
+  // Creating one from a recipe means "put this in it" — do that, don't make
+  // the user file it separately.
+  if (recipeId) await toggleInCollection(c.id, recipeId);
+  await refresh();
+  if (!recipeId) navigate(`#/collection/${c.id}`);
+}
+
+/** Rename or delete a collection. The recipes inside are never touched. */
+async function collectionMenu(c: Collection): Promise<void> {
+  const name = prompt('Rename this collection, or clear the box to delete it', c.name);
+  if (name === null) return;
+
+  if (!name.trim()) {
+    const ok = confirm(
+      `Delete the collection "${c.name}"? The recipes in it stay in your library.`,
+    );
+    if (!ok) return;
+    await deleteCollection(c.id);
+    await refresh();
+    navigate('#/');
+    return;
+  }
+
+  await renameCollection(c.id, name);
+  await refresh();
+}
+
 async function refresh(): Promise<void> {
-  recipes = await listRecipes();
+  [recipes, collections] = await Promise.all([listRecipes(), listCollections()]);
   await render();
 }
 

@@ -7,7 +7,10 @@
  */
 
 export type Route =
-  | { name: 'library' }
+  /** Home: the grid of collection folders. */
+  | { name: 'home' }
+  /** All recipes, or the contents of one collection. */
+  | { name: 'library'; collectionId?: string }
   | { name: 'recipe'; id: string }
   | { name: 'cook'; id: string }
   | { name: 'edit'; id: string };
@@ -19,7 +22,9 @@ export function parseRoute(hash: string): Route {
   if (head === 'recipe' && id) return { name: 'recipe', id };
   if (head === 'cook' && id) return { name: 'cook', id };
   if (head === 'edit' && id) return { name: 'edit', id };
-  return { name: 'library' };
+  if (head === 'all') return { name: 'library' };
+  if (head === 'collection' && id) return { name: 'library', collectionId: id };
+  return { name: 'home' };
 }
 
 export function currentRoute(): Route {

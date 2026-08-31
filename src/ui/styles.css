@@ -758,6 +758,156 @@ button.chip:hover {
   margin-bottom: 0;
 }
 
+/* --- Home: the folder grid (FR-3.5) ---
+ * Two columns on a phone, in the spirit of Instagram's Saved collections.
+ * The cover image does the work; the label is small and quiet under it.
+ */
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 12px;
+  margin-top: 8px;
+}
+
+.folder {
+  display: block;
+  padding: 0;
+  text-align: left;
+  color: var(--text);
+  text-decoration: none;
+  background: none;
+  border: none;
+  min-height: auto;
+  animation: card-in 0.28s var(--ease) backwards;
+}
+
+.folder-cover {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  transition: transform 0.14s var(--ease), border-color 0.14s var(--ease);
+}
+.folder:active .folder-cover {
+  transform: scale(0.975);
+}
+.folder:hover .folder-cover {
+  border-color: var(--border-strong);
+}
+
+.folder-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Above the fallback glyph, so a loaded cover simply hides it. */
+  z-index: 1;
+}
+
+/*
+ * The glyph sits under the cover image, so it shows through when there is no
+ * image and is simply covered when there is. No :has() and no JS needed —
+ * a broken image adds .no-image, which hides the <img> and reveals it again.
+ */
+.folder-glyph {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  color: var(--text-faint);
+}
+.folder-glyph svg {
+  width: 100%;
+  height: 100%;
+}
+.folder-cover.no-image img {
+  display: none;
+}
+
+/* "All recipes" is a view, not a collection — mark it as the odd one out. */
+.folder.pinned .folder-cover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.new-folder .folder-cover {
+  border-style: dashed;
+}
+.new-folder .folder-glyph {
+  color: var(--accent);
+}
+
+.folder-name {
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  margin: 9px 0 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-count {
+  font-size: var(--step--1);
+  color: var(--text-faint);
+  margin: 0;
+}
+
+/* --- Collection picker sheet --- */
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: var(--step-0);
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.pick-row.on {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: var(--accent-quiet);
+}
+.pick-tick {
+  flex: 0 0 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 7px;
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pick-row.on .pick-tick {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pick-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --- Library --- */
 
 .library-head {

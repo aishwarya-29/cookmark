@@ -152,3 +152,24 @@ export interface Recipe {
 
 /** Everything needed to create a row, before any extraction has run. */
 export type NewRecipe = Pick<Recipe, 'sourceUrl'> & Partial<Recipe>;
+
+/**
+ * A user-defined grouping — PRD FR-3.5.
+ *
+ * Deliberately simple: no nesting, no auto-curation, no rules. A recipe can
+ * be in many collections, and membership lives here rather than on the recipe
+ * so adding to a collection never touches the recipe row.
+ */
+export interface Collection {
+  id: string;
+  name: string;
+  /** Recipe ids, in the order the user added them. */
+  recipeIds: string[];
+  /**
+   * Thumbnail for the folder tile. Falls back to the newest member's image,
+   * so a collection looks right without the user choosing a cover.
+   */
+  coverRecipeId?: string;
+  createdAt: number;
+  updatedAt: number;
+}

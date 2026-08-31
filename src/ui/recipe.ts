@@ -1,10 +1,10 @@
-import type { Recipe, Ingredient } from '../data/types';
+import type { Recipe, Ingredient, Collection } from '../data/types';
 import { formatIngredient } from '../lib/quantity';
 import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes';
 import { escapeHtml, formatDate, onClick } from './dom';
 import { navigate } from './router';
 import { reExtract } from '../lib/extract';
-import { suggestionsHtml, categoriesHtml, bindCategoryActions } from './categorise';
+import { suggestionsHtml, categoriesHtml, bindCategoryActions, collectionsRowHtml } from './categorise';
 
 /**
  * Recipe detail (FR-4.1) and editing (FR-2.10).
@@ -68,6 +68,7 @@ export function renderRecipe(
   r: Recipe,
   onChange: () => void,
   knownTags: string[] = [],
+  collections: Collection[] = [],
 ): void {
   const hasIngredients = (r.ingredients?.length ?? 0) > 0;
   const hasSteps = (r.steps?.length ?? 0) > 0;
@@ -98,6 +99,7 @@ export function renderRecipe(
     ${attributionHtml(r)}
     <p class="dim small">Saved ${formatDate(r.savedAt)}</p>
 
+    ${collectionsRowHtml(r, collections)}
     ${categoriesHtml(r)}
     ${suggestionsHtml(r)}
 

@@ -1,4 +1,4 @@
-import type { Recipe } from '../data/types';
+import type { Recipe, Collection } from '../data/types';
 import { updateRecipe } from '../data/recipes';
 import { escapeHtml, onClick } from './dom';
 
@@ -167,4 +167,24 @@ export function bindCategoryActions(
     if (!value) return;
     void save({ tags: [...new Set([...(r.tags ?? []), value])] });
   });
+}
+
+/**
+ * Which collections this recipe is in, plus a way to change that (FR-3.5).
+ * Shown on the recipe detail screen.
+ */
+export function collectionsRowHtml(r: Recipe, collections: Collection[]): string {
+  const mine = collections.filter((c) => c.recipeIds.includes(r.id));
+  return `
+    <div class="chip-row">
+      ${mine
+        .map(
+          (c) =>
+            `<a class="chip" href="#/collection/${c.id}">${escapeHtml(c.name)}</a>`,
+        )
+        .join('')}
+      <button class="chip add" data-action="add-to-collection">
+        ${mine.length ? '+ collection' : '+ add to a collection'}
+      </button>
+    </div>`;
 }

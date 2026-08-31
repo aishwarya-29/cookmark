@@ -4,6 +4,7 @@ import type { Recipe } from './types';
 import { canonicaliseInstagramUrl, type CanonicalUrl } from '../lib/url';
 import { recipeSearchTerms } from '../lib/ingredient-terms';
 import { newId } from '../lib/id';
+import { purgeRecipe } from './collections';
 
 /**
  * The save path — PRD NFR-3.1, the product's fundamental promise.
@@ -125,6 +126,9 @@ export async function getRecipe(
 /** FR-5.3 — deletion is immediate and complete. */
 export async function deleteRecipe(id: string, db: ReelRecipesDb = defaultDb): Promise<void> {
   await db.recipes.delete(id);
+  // Drop it from any collection too, so folders never count or cover-image a
+  // recipe that no longer exists.
+  await purgeRecipe(id, db);
 }
 
 /**

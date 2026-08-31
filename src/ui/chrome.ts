@@ -112,3 +112,42 @@ export function pasteSheetHtml(open: boolean, clipboardOffer: string | null): st
 export function activeTabFor(route: Route): Tab {
   return route.name === 'library' ? 'library' : 'library';
 }
+
+/**
+ * "Add to a collection" — a checklist sheet reached from a recipe (FR-3.5).
+ * A recipe can be in many collections, so these are toggles rather than a
+ * single choice.
+ */
+export function collectionPickerHtml(
+  open: boolean,
+  collections: { id: string; name: string; recipeIds: string[] }[],
+  recipeId: string | null,
+): string {
+  const rows = collections
+    .map((c) => {
+      const inIt = recipeId ? c.recipeIds.includes(recipeId) : false;
+      return `
+        <button class="pick-row ${inIt ? 'on' : ''}" data-toggle-collection="${c.id}">
+          <span class="pick-tick">${inIt ? '✓' : ''}</span>
+          <span class="pick-name">${escapeHtml(c.name)}</span>
+          <span class="pick-count dim small">${c.recipeIds.length}</span>
+        </button>`;
+    })
+    .join('');
+
+  return `
+    <div class="sheet-scrim ${open ? 'open' : ''}" data-close-picker></div>
+    <div class="sheet ${open ? 'open' : ''}" role="dialog" aria-label="Add to a collection"
+         aria-hidden="${open ? 'false' : 'true'}">
+      <div class="sheet-grip"></div>
+      <h2 class="sheet-title">Add to a collection</h2>
+      ${
+        collections.length
+          ? `<div class="pick-list">${rows}</div>`
+          : `<p class="dim small">No collections yet. Make your first one below.</p>`
+      }
+      <button class="subtle sheet-alt" data-action="new-collection-from-recipe">
+        New collection
+      </button>
+    </div>`;
+}
