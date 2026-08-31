@@ -214,6 +214,20 @@ function looksLikeIngredient(line: string): boolean {
 const MAX_TITLE_CHARS = 60;
 
 /**
+ * Opening lines that are engagement hooks, not dish names. Creators lead with
+ * these constantly ("WAIT FOR THE END…", "Broke but Bougie Ep. 3"), and taking
+ * them as the title makes a library of recipes unbrowsable.
+ */
+const HOOK_RE =
+  /^\s*(?:wait for (?:it|the end)|watch (?:till|until) the end|you (?:won't|will not) believe|pov\b|storytime|new (?:video|recipe|series)|trust me|listen\b|okay so\b|guys\b)/iu;
+
+/**
+ * Series and episode labels, which can appear anywhere in a short opening
+ * line: "Broke but Bougie Ep. 3", "Day 12 of cheap dinners".
+ */
+const SERIES_RE = /\b(?:ep(?:isode)?\.?\s*\d+|part\s*\d+|day\s*\d+)\b/iu;
+
+/**
  * Reduce a caption's opening line to something usable as a title.
  *
  * Many creators open with a paragraph rather than a dish name — one real
@@ -249,10 +263,14 @@ export function parseCaption(caption: string): ParsedCaption {
     const clean = stripHashtags(l)
       .replace(/^[\s\p{Emoji_Presentation}\p{Extended_Pictographic}]+/u, '')
       .trim();
-    if (clean.length >= 3 && !NOISE_RE.test(clean) && !/^[.\-–—_=]+$/.test(clean)) {
-      title = tidyTitle(clean);
-      break;
-    }
+    if (clean.length < 3 || NOISE_RE.test(clean) || /^[.\-–—_=]+$/.test(clean)) continue;
+    // A section heading is never a title — reaching one means the caption had
+    // no usable name, and a fallback beats labelling a recipe "Ingredients:".
+    if (INGREDIENT_HEADING_RE.test(clean) || METHOD_HEADING_RE.test(clean)) break;
+    // Skip engagement hooks and series labels; the dish name usually follows.
+    if (HOOK_RE.test(clean) || SERIES_RE.test(clean)) continue;
+    title = tidyTitle(clean);
+    if (title) break;
   }
 
   // --- Walk lines, tracking which section we're in ---

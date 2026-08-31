@@ -149,6 +149,26 @@ describe('title extraction', () => {
   });
 });
 
+describe('engagement hooks are not titles', () => {
+  it('skips "WAIT FOR THE END…" and takes the dish name below it', () => {
+    // Regression: this real caption made the creator's hook the recipe title.
+    const r = parseCaption(f['DIy0z9SyS-H']!.caption);
+    expect(r.title).not.toMatch(/wait for the end/i);
+  });
+
+  it('skips a series label', () => {
+    const r = parseCaption(
+      'Broke but Bougie Ep. 3\nChilli oil noodles\n\nIngredients:\n300g noodles\n2 tbsp oil\n\nMethod:\nBoil.',
+    );
+    expect(r.title).toBe('Chilli oil noodles');
+  });
+
+  it('still uses a normal opening line', () => {
+    const r = parseCaption('Chilli oil noodles\n\nIngredients:\n300g noodles\n2 tbsp oil\n\nMethod:\nBoil.');
+    expect(r.title).toBe('Chilli oil noodles');
+  });
+});
+
 describe('section sub-headings', () => {
   it('drops "For the Chicken Marinade" — no trailing colon', () => {
     // Regression: these appeared as ingredients because the old pattern

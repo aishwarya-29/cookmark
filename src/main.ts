@@ -464,14 +464,31 @@ document.addEventListener('visibilitychange', () => void pollClipboard());
  */
 async function handleShareTarget(): Promise<void> {
   const params = new URLSearchParams(location.search);
-  const shared = params.get('url') ?? params.get('text');
-  if (!shared) return;
+  // Instagram's share sheet does not use a single consistent field: Android
+  // puts the link in `text` alongside a caption, iOS Shortcuts sends `url`,
+  // and some launchers use `title`. Check all three.
+  const shared = [params.get('url'), params.get('text'), params.get('title')]
+    .filter(Boolean)
+    .join(' ');
+  if (!shared.trim()) return;
 
   // Clear it from the address bar first, so a reload cannot save twice.
   history.replaceState(null, '', location.pathname + location.hash);
 
   const match = shared.match(/https?:\/\/\S*instagram\.com\/\S+/i);
-  if (!match) return;
+  if (!match) {
+    // A share that produced nothing usable must say so, not vanish silently.
+    notice = {
+      tone: 'error',
+      text: "That share didn't contain an Instagram link.",
+    };
+    await render();
+    return;
+  }
+
+  // Land on the library, not home: a share should show what it just saved,
+  // not bury it one level down inside "All recipes".
+  if (currentRoute().name === 'home') location.hash = '#/all';
   await saveUrl(match[0]);
   await refresh();
 }

@@ -410,6 +410,36 @@ export async function extractRecipe(
 }
 
 /**
+ * How long before a retryable failure is worth trying again. Instagram's rate
+ * limit is the common cause, and it clears in minutes.
+ */
+const RETRY_AFTER_MS = 10 * 60 * 1000;
+
+/**
+ * Rows that failed for a retryable reason and are now worth another attempt.
+ *
+ * Without this, "will retry automatically" was a lie: nothing ever did. A
+ * rate-limited save would sit as link-only forever even though the caption
+ * became reachable minutes later.
+ */
+function isRetryable(r: Recipe, now: number): boolean {
+  if (r.extractionState === 'failed_permanent') return false;
+  // Already has a real recipe — nothing to retry.
+  if (r.extractionMethod !== 'link_only') return false;
+
+  const last = r.attempts[r.attempts.length - 1];
+  if (!last) return false;
+  if (now - last.at < RETRY_AFTER_MS) return false;
+
+  // Only retry when a tier failed for a reason that might resolve itself.
+  return r.attempts.some(
+    (a) =>
+      a.outcome === 'failure' &&
+      /busy|rate|timed out|could not reach|network|quota/i.test(a.reason ?? ''),
+  );
+}
+
+/**
  * Settle every queued row. Called on startup so entries saved during an outage,
  * or while the tab was closed, are picked up (FR-1.6).
  */
@@ -417,8 +447,16 @@ export async function processQueue(
   db: ReelRecipesDb = defaultDb,
   onProgress?: () => void,
 ): Promise<void> {
+  const now = Date.now();
   const pending = await db.recipes
-    .filter((r) => r.extractionState === 'queued' || r.extractionState === 'running')
+    .filter(
+      (r) =>
+        r.extractionState === 'queued' ||
+        r.extractionState === 'running' ||
+        // Retry transient failures — a rate limit clears in minutes (FR-2.9).
+        (r.extractionState === 'failed_retryable' && isRetryable(r, now)) ||
+        (r.extractionState === 'settled' && isRetryable(r, now)),
+    )
     .toArray();
 
   // Sequential on purpose: a burst of parallel requests to Instagram is the
