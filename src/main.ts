@@ -24,6 +24,7 @@ import {
 } from './data/collections';
 import type { Collection } from './data/types';
 import { headerHtml, tabBarHtml, pasteSheetHtml, collectionPickerHtml } from './ui/chrome';
+import { settingsHtml, bindSettings, registerServiceWorker } from './ui/settings';
 
 /**
  * App shell: owns routing, the paste bar, and the single render entry point.
@@ -114,7 +115,10 @@ function renderChrome(route: ReturnType<typeof currentRoute>, title: string): vo
 
   // The tab bar and paste sheet belong to the browsing screens, not to detail.
   const browsing = route.name === 'home' || route.name === 'library';
-  chromeBottom.innerHTML = browsing ? tabBarHtml('library') : '';
+  chromeBottom.innerHTML =
+    browsing || route.name === 'settings'
+      ? tabBarHtml(route.name === 'settings' ? 'settings' : 'library')
+      : '';
   sheetRoot.innerHTML = browsing ? pasteSheetHtml(sheetOpen, clipboardOffer) : '';
 
   onClick(chromeBottom, '[data-tab="add"]', () => {
@@ -245,6 +249,13 @@ async function render(): Promise<void> {
       onClick(app, '[data-action="collection-menu"]', () => void collectionMenu(collection));
     }
 
+    return;
+  }
+
+  if (route.name === 'settings') {
+    renderChrome(route, 'Settings');
+    app.innerHTML = settingsHtml(recipes.length);
+    bindSettings(app, () => void refresh());
     return;
   }
 
@@ -446,7 +457,29 @@ async function pollClipboard(): Promise<void> {
 onRouteChange(() => void render());
 document.addEventListener('visibilitychange', () => void pollClipboard());
 
+/**
+ * Android share target (FR-1.3). The manifest points the share sheet at "/"
+ * with the shared URL as a query param, so a share arrives as a normal page
+ * load carrying ?url= or ?text=.
+ */
+async function handleShareTarget(): Promise<void> {
+  const params = new URLSearchParams(location.search);
+  const shared = params.get('url') ?? params.get('text');
+  if (!shared) return;
+
+  // Clear it from the address bar first, so a reload cannot save twice.
+  history.replaceState(null, '', location.pathname + location.hash);
+
+  const match = shared.match(/https?:\/\/\S*instagram\.com\/\S+/i);
+  if (!match) return;
+  await saveUrl(match[0]);
+  await refresh();
+}
+
+registerServiceWorker();
+
 void refresh().then(async () => {
+  await handleShareTarget();
   await processQueue(undefined, () => void refresh());
   await refresh();
 });

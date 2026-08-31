@@ -9,7 +9,7 @@ import type { Route } from './router';
  * with the view, which is what stops the tab bar flickering on navigation.
  */
 
-export type Tab = 'library' | 'add';
+export type Tab = 'library' | 'add' | 'settings';
 
 /** Sticky top bar. Title collapses into the bar as the page scrolls. */
 export function headerHtml(title: string, opts: { back?: string; compact?: boolean } = {}): string {
@@ -60,10 +60,18 @@ export function tabBarHtml(active: Tab): string {
             stroke-linecap="round"/>
     </svg>`;
 
+  const iconSettings = `
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M18 6l-1.4 1.4M7.4 16.6L6 18M18 18l-1.4-1.4M7.4 7.4L6 6"
+            stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>`;
+
   return `
     <nav class="tabbar" aria-label="Main">
       ${tab('library', 'Library', '#/', iconLibrary)}
       ${tab('add', 'Add', '#', iconAdd, true)}
+      ${tab('settings', 'Settings', '#/settings', iconSettings)}
     </nav>`;
 }
 

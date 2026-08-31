@@ -13,7 +13,8 @@ export type Route =
   | { name: 'library'; collectionId?: string }
   | { name: 'recipe'; id: string }
   | { name: 'cook'; id: string }
-  | { name: 'edit'; id: string };
+  | { name: 'edit'; id: string }
+  | { name: 'settings' };
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#\/?/, '');
@@ -22,6 +23,7 @@ export function parseRoute(hash: string): Route {
   if (head === 'recipe' && id) return { name: 'recipe', id };
   if (head === 'cook' && id) return { name: 'cook', id };
   if (head === 'edit' && id) return { name: 'edit', id };
+  if (head === 'settings') return { name: 'settings' };
   if (head === 'all') return { name: 'library' };
   if (head === 'collection' && id) return { name: 'library', collectionId: id };
   return { name: 'home' };

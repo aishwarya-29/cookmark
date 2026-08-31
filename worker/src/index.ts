@@ -48,10 +48,23 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  /**
+   * Private-network dev origins (http://192.168.x.x:5173 and friends), so
+   * testing the dev build on a phone keeps working once the allowlist is set.
+   * These are unroutable from the internet, so allowing them costs nothing.
+   */
+  const isLanDev = /^https?:\/\/(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(
+    origin,
+  );
+
   // With no allowlist configured, echo the origin. This Worker exposes only
   // public Instagram metadata and holds no user data or credentials.
   const allowOrigin =
-    allowed.length === 0 ? origin || '*' : allowed.includes(origin) ? origin : allowed[0]!;
+    allowed.length === 0
+      ? origin || '*'
+      : allowed.includes(origin) || isLanDev
+        ? origin
+        : allowed[0]!;
 
   return {
     'Access-Control-Allow-Origin': allowOrigin,

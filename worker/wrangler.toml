@@ -11,7 +11,7 @@ binding = "AI"
 [vars]
 # Comma-separated origins allowed to call this Worker. Leave empty for local
 # development; set it to your Pages URL before deploying.
-ALLOWED_ORIGINS = ""
+ALLOWED_ORIGINS = "https://reel-recipes.pages.dev,https://master.reel-recipes.pages.dev,http://localhost:5173"
 
 [observability]
 enabled = true
