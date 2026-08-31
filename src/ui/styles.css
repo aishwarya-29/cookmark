@@ -280,6 +280,19 @@ body {
   margin: 0 0 16px;
 }
 
+.name-field {
+  width: 100%;
+  min-height: var(--touch);
+  margin-top: 8px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
 .sheet-hint {
   margin: 12px 0 0;
   line-height: 1.5;

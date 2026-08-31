@@ -45,6 +45,39 @@ describe('saveReelUrl — durability before extraction (NFR-3.1)', () => {
   });
 });
 
+describe('naming a recipe as you save it', () => {
+  it('uses the name the user typed', async () => {
+    const out = await saveReelUrl(
+      'https://www.instagram.com/reel/Cx1y2Z3aBcD/',
+      db,
+      'Nan’s chilli oil',
+    );
+    expect(out.kind).toBe('saved');
+    const rows = await listRecipes(db);
+    expect(rows[0]!.title).toBe('Nan’s chilli oil');
+  });
+
+  it('protects that name from being overwritten by extraction (FR-2.10)', async () => {
+    await saveReelUrl('https://www.instagram.com/reel/Cx1y2Z3aBcD/', db, 'My name');
+    const rows = await listRecipes(db);
+    expect(rows[0]!.manuallyEditedFields).toContain('title');
+  });
+
+  it('falls back to the provisional title when no name is given', async () => {
+    await saveReelUrl('https://www.instagram.com/nonnas_kitchen/reel/Cx1y2Z3aBcD/', db);
+    const rows = await listRecipes(db);
+    expect(rows[0]!.title).toContain('nonnas_kitchen');
+    expect(rows[0]!.manuallyEditedFields).toBeUndefined();
+  });
+
+  it('ignores a name that is only whitespace', async () => {
+    await saveReelUrl('https://www.instagram.com/reel/Cx1y2Z3aBcD/', db, '   ');
+    const rows = await listRecipes(db);
+    expect(rows[0]!.title).toContain('Saved reel');
+    expect(rows[0]!.manuallyEditedFields).toBeUndefined();
+  });
+});
+
 describe('duplicate detection (FR-2.2)', () => {
   it('returns the existing recipe rather than creating a second row', async () => {
     const first = await saveReelUrl('https://www.instagram.com/reel/Cx1y2Z3aBcD/', db);

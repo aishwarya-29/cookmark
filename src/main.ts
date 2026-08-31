@@ -214,7 +214,7 @@ async function renderRoute(): Promise<void> {
 
     // Preserve what the user is typing across background refreshes — for every
     // text field on screen, including those in the sheet.
-    const FIELDS = ['#url-input', '#search-text', '#cook-with'];
+    const FIELDS = ['#url-input', '#name-input', '#search-text', '#cook-with'];
     const preserved = FIELDS.map((sel) => {
       const el = document.querySelector<HTMLInputElement>(sel);
       return el
@@ -397,7 +397,7 @@ function saveErrorMessage(err: unknown): string {
   return `Couldn't save that: ${msg || 'unknown error'}`;
 }
 
-async function saveUrl(value: string): Promise<void> {
+async function saveUrl(value: string, userTitle?: string): Promise<void> {
   notice = null;
   saving = true;
 
@@ -406,7 +406,7 @@ async function saveUrl(value: string): Promise<void> {
     // ONLY the durable write is guarded here. Rendering used to sit inside
     // this try, so a render error reported as a save failure even though the
     // reel was safely on disk — the most misleading message the app can show.
-    const outcome = await saveReelUrl(value);
+    const outcome = await saveReelUrl(value, undefined, userTitle);
     if (outcome.kind === 'duplicate') {
       notice = { tone: 'duplicate', text: 'Already in your library.' };
     } else {
@@ -438,15 +438,18 @@ async function onSubmit(e: SubmitEvent): Promise<void> {
   if (saving) return;
 
   const input = document.querySelector<HTMLInputElement>('#url-input')!;
+  const nameInput = document.querySelector<HTMLInputElement>('#name-input');
   const value = input.value;
+  const userTitle = nameInput?.value;
   if (!value.trim()) return;
 
   // Clear the field before saving: saveUrl() renders as soon as the row is
   // durable, and render() carries the live field value forward — so clearing
   // afterwards would be undone by that first paint.
   input.value = '';
+  if (nameInput) nameInput.value = '';
 
-  await saveUrl(value);
+  await saveUrl(value, userTitle);
 
   if (notice?.tone === 'info') {
     // The clipboard prompt is earned by a successful manual paste — this is
@@ -468,7 +471,11 @@ async function acceptClipboardOffer(): Promise<void> {
   const url = clipboardOffer;
   clipboardOffer = null;
   if (!url) return;
-  await saveUrl(url);
+  // Honour a name already typed in the sheet, rather than silently dropping it.
+  const nameInput = document.querySelector<HTMLInputElement>('#name-input');
+  const userTitle = nameInput?.value;
+  if (nameInput) nameInput.value = '';
+  await saveUrl(url, userTitle);
   await refresh();
 }
 

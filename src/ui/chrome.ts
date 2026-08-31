@@ -113,6 +113,16 @@ export function pasteSheetHtml(open: boolean, clipboardOffer: string | null): st
         <button type="submit">Save</button>
       </form>
 
+      <!--
+        Optional on purpose. Extraction names most recipes correctly, and
+        requiring a name here would put typing in front of every save — the
+        friction the optimistic save exists to avoid (FR-1.5).
+      -->
+      <input id="name-input" type="text" autocomplete="off"
+             class="name-field"
+             placeholder="Name it yourself (optional)"
+             aria-label="Recipe name, optional" />
+
       <p class="sheet-hint dim small">
         Copy a link in Instagram, come back, and it's saved before anything else happens.
       </p>

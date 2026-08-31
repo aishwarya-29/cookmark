@@ -38,6 +38,8 @@ function provisionalTitle(parsed: CanonicalUrl, savedAt: number): string {
 export async function saveReelUrl(
   rawUrl: string,
   db: ReelRecipesDb = defaultDb,
+  /** A name the user typed. Optional, and protected from re-extraction. */
+  userTitle?: string,
 ): Promise<SaveOutcome> {
   const parsed = canonicaliseInstagramUrl(rawUrl);
 
@@ -46,9 +48,13 @@ export async function saveReelUrl(
   if (existing) return { kind: 'duplicate', existing };
 
   const now = Date.now();
+  const named = userTitle?.trim();
   const recipe: Recipe = {
     id: newId(),
-    title: provisionalTitle(parsed, now),
+    title: named || provisionalTitle(parsed, now),
+    // A name the user typed is theirs: mark it edited so no tier overwrites
+    // it, exactly as with a name typed on the edit screen (FR-2.10).
+    ...(named ? { manuallyEditedFields: ['title'] } : {}),
     sourceUrl: parsed.canonical,
     shortcode: parsed.shortcode,
     creatorHandle: parsed.creatorHandle,
