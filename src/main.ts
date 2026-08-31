@@ -223,41 +223,64 @@ async function refresh(): Promise<void> {
   await render();
 }
 
+/**
+ * Turn a save failure into something the user can act on.
+ *
+ * The generic "couldn't save that" told the user nothing and hid real causes
+ * — most importantly a full or unavailable IndexedDB, which is the one case
+ * where the product's core promise is genuinely at risk (PRD §07).
+ */
+function saveErrorMessage(err: unknown): string {
+  if (err instanceof InvalidInstagramUrlError) return err.message;
+
+  const name = err instanceof Error ? err.name : '';
+  const msg = err instanceof Error ? err.message : String(err);
+
+  if (name === 'QuotaExceededError' || /quota/i.test(msg)) {
+    return 'This device is out of storage, so the reel could not be saved. Free some space and try again.';
+  }
+  if (name === 'InvalidStateError' || /database|indexeddb/i.test(msg)) {
+    // Private browsing on iOS blocks IndexedDB entirely.
+    return 'Storage is unavailable in this browser — a private window blocks it. Try a normal tab.';
+  }
+  // Anything else: say what actually happened rather than a shrug.
+  return `Couldn't save that: ${msg || 'unknown error'}`;
+}
+
 async function saveUrl(value: string): Promise<void> {
   notice = null;
   saving = true;
+
+  let saved: Recipe | null = null;
   try {
+    // ONLY the durable write is guarded here. Rendering used to sit inside
+    // this try, so a render error reported as a save failure even though the
+    // reel was safely on disk — the most misleading message the app can show.
     const outcome = await saveReelUrl(value);
     if (outcome.kind === 'duplicate') {
-      notice = {
-        tone: 'duplicate',
-        text: 'Already in your library.',
-      };
+      notice = { tone: 'duplicate', text: 'Already in your library.' };
     } else {
       notice = { tone: 'info', text: 'Saved.' };
-
-      // FR-1.5 — the row is durable now, so show it NOW. Rendering here rather
-      // than after this function returns is what keeps acknowledgement under
-      // 200ms; extraction can take 20s+ and must never gate the first paint.
-      recipes = [outcome.recipe, ...recipes];
-      await render();
-
-      // Extraction runs in the background. Deliberately not awaited.
-      void extractRecipe(outcome.recipe.id, undefined, () => void refresh()).then(() =>
-        refresh(),
-      );
+      saved = outcome.recipe;
     }
   } catch (err) {
-    notice = {
-      tone: 'error',
-      text:
-        err instanceof InvalidInstagramUrlError
-          ? err.message
-          : "Couldn't save that just now. The link is unchanged — try again.",
-    };
+    notice = { tone: 'error', text: saveErrorMessage(err) };
+    // Keep the real error inspectable — debugging a silent failure months
+    // later from memory is not viable (NFR-6.3).
+    console.error('[save failed]', err);
   } finally {
     saving = false;
   }
+
+  if (!saved) return;
+
+  // FR-1.5 — the row is durable now, so show it NOW. Extraction can take 20s+
+  // and must never gate the first paint.
+  recipes = [saved, ...recipes];
+  await render();
+
+  // Extraction runs in the background. Deliberately not awaited.
+  void extractRecipe(saved.id, undefined, () => void refresh()).then(() => refresh());
 }
 
 async function onSubmit(e: SubmitEvent): Promise<void> {

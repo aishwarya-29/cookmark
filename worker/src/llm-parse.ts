@@ -275,7 +275,11 @@ export async function parseCaptionWithLlm(
     ...(typeof obj['cuisine'] === 'string' && obj['cuisine'] ? { cuisine: obj['cuisine'] } : {}),
     ...(typeof obj['mealType'] === 'string' && obj['mealType'] ? { mealType: obj['mealType'] } : {}),
     ...(Array.isArray(obj['tags']) ? { tags: obj['tags'] as string[] } : {}),
-    ...(typeof obj['title'] === 'string' && obj['title'] ? { title: obj['title'] } : {}),
+    // A title longer than this is prose, not a dish name — drop it and let
+    // the client fall back rather than filling a card with a paragraph.
+    ...(typeof obj['title'] === 'string' && obj['title'] && obj['title'].length <= 60
+      ? { title: obj['title'] }
+      : {}),
     ...(typeof obj['sourceLanguage'] === 'string' && obj['sourceLanguage']
       ? { sourceLanguage: obj['sourceLanguage'] }
       : {}),

@@ -100,6 +100,55 @@ describe('real caption: Spicy lemon coriander chicken (@chefvpnjadhav)', () => {
   });
 });
 
+describe('title extraction', () => {
+  it('does not make a 500-character paragraph into a title', () => {
+    // Regression: a real caption opened with a long paragraph about tomato
+    // gojju, and the entire paragraph became the recipe title.
+    const caption = [
+      'tometo gojju is a kannada pickle like thick gravy made entirely with tomatoes',
+      'as the base. it’s similar to thakkali thokku and comes in different varieties.',
+      'did gojju came from thokku, idk! what i know is its quick to make, stores well',
+      'and goes well with roti to rice.',
+      '',
+      'Ingredients:',
+      '4 tomatoes',
+      '2 tbsp oil',
+      '',
+      'Method:',
+      'Cook the tomatoes down until thick.',
+    ].join(' ');
+    const r = parseCaption(caption);
+    expect((r.title ?? '').length).toBeLessThanOrEqual(60);
+  });
+
+  it('cuts a long opening line at its first sentence', () => {
+    const r = parseCaption(
+      'Tomato gojju. This is a long trailing explanation that goes on well past any reasonable title length.\n\nIngredients:\n2 tomatoes\n1 tbsp oil\n\nMethod:\nCook.',
+    );
+    expect(r.title).toBe('Tomato gojju');
+  });
+
+  it('cuts at a comma when there is no sentence break', () => {
+    const r = parseCaption(
+      'Creamy tomato pasta, the one my flatmate begs me to make every single week without fail\n\nIngredients:\n200g pasta\n1 tbsp oil\n\nMethod:\nBoil.',
+    );
+    expect(r.title).toBe('Creamy tomato pasta');
+  });
+
+  it('gives no title rather than a truncated one', () => {
+    // Better to fall back to "@handle — date" than show a chopped fragment.
+    const wall =
+      'this is one enormous unbroken run of words with no punctuation anywhere at all so nothing can be cut sensibly from it';
+    const r = parseCaption(`${wall}\n\nIngredients:\n2 eggs\n1 cup flour\n\nMethod:\nMix.`);
+    expect(r.title).toBeUndefined();
+  });
+
+  it('keeps a normal short title untouched', () => {
+    const r = parseCaption('Bachelor Chicken Peratal\n\nIngredients:\n2 eggs\n1 cup flour\n\nMethod:\nMix.');
+    expect(r.title).toBe('Bachelor Chicken Peratal');
+  });
+});
+
 describe('section sub-headings', () => {
   it('drops "For the Chicken Marinade" — no trailing colon', () => {
     // Regression: these appeared as ingredients because the old pattern

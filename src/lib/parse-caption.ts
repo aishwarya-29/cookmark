@@ -210,15 +210,47 @@ function looksLikeIngredient(line: string): boolean {
   return !LEADING_VERB_RE.test(t);
 }
 
+/** A title should fit a card. Beyond this it is prose, not a name. */
+const MAX_TITLE_CHARS = 60;
+
+/**
+ * Reduce a caption's opening line to something usable as a title.
+ *
+ * Many creators open with a paragraph rather than a dish name — one real
+ * caption began with 500 characters of preamble about tomato gojju, which
+ * became the entire title. Cut to the first sentence or clause, and give up
+ * rather than truncating mid-word into nonsense.
+ */
+function tidyTitle(line: string): string | undefined {
+  let t = line.replace(/[—–-]\s*(?:quick|simple|easy).*$/i, '').trim();
+  if (t.length <= MAX_TITLE_CHARS) return t || undefined;
+
+  // First sentence, if it is short enough to be a name.
+  const sentence = t.split(/(?<=[.!?])\s/)[0]?.trim();
+  if (sentence && sentence.length <= MAX_TITLE_CHARS) {
+    return sentence.replace(/[.!?]+$/, '');
+  }
+
+  // Otherwise the first clause, split on a comma or dash.
+  const clause = t.split(/[,;:]|\s[—–-]\s/)[0]?.trim();
+  if (clause && clause.length <= MAX_TITLE_CHARS) return clause;
+
+  // Nothing short enough: a truncated paragraph is a worse title than none,
+  // and the caller falls back to the creator handle plus date.
+  return undefined;
+}
+
 export function parseCaption(caption: string): ParsedCaption {
   const rawLines = caption.split(/\r?\n/);
 
   // --- Title: first substantial non-noise line ---
   let title: string | undefined;
   for (const l of rawLines) {
-    const clean = stripHashtags(l).replace(/^[\s\p{Emoji_Presentation}\p{Extended_Pictographic}]+/u, '').trim();
+    const clean = stripHashtags(l)
+      .replace(/^[\s\p{Emoji_Presentation}\p{Extended_Pictographic}]+/u, '')
+      .trim();
     if (clean.length >= 3 && !NOISE_RE.test(clean) && !/^[.\-–—_=]+$/.test(clean)) {
-      title = clean.replace(/[—–-]\s*(?:quick|simple|easy).*$/i, '').trim();
+      title = tidyTitle(clean);
       break;
     }
   }

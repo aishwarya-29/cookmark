@@ -226,6 +226,11 @@ async function runTier1(recipe: Recipe): Promise<Tier1Result> {
   // hook rather than a dish name. Fall back to the local parser's guess, then
   // to the creator handle, rather than leaving the provisional "Saved reel".
   if (!title && data.rawCaption) title = parseCaption(data.rawCaption).title;
+  // Still nothing usable: prefer the creator's name over a bare "Saved reel",
+  // which the provisional title used when the handle was not yet known.
+  if (!title && (data.displayName || data.creatorHandle)) {
+    title = data.displayName || `@${data.creatorHandle}`;
+  }
   if (title && !edited.has('title')) patch.title = title;
   if (!edited.has('ingredients')) patch.ingredients = ingredients;
   if (!edited.has('steps')) patch.steps = steps;
