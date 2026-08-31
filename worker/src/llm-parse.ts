@@ -40,6 +40,21 @@ export class QuotaExhaustedError extends Error {
 
 const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
+/**
+ * Ceiling on a single inference. Measured latency on real captions ranges from
+ * ~9s (short) to ~45s (1600+ chars) — the long ones are exactly the captions
+ * worth parsing, so this must not be tight. Beyond this the call is stuck
+ * rather than slow, and falling back to the regex parser beats hanging.
+ */
+const AI_TIMEOUT_MS = 75_000;
+
+/**
+ * Captions beyond this are truncated before parsing. Instagram's own limit is
+ * 2200 characters, so this only trims the trailing hashtag wall, which carries
+ * no recipe content but does inflate inference time.
+ */
+const MAX_CAPTION_CHARS = 2400;
+
 const SYSTEM_PROMPT = `You extract recipes from Instagram caption text.
 
 Return ONLY what is genuinely present in the caption. This is the most
@@ -148,17 +163,32 @@ export async function parseCaptionWithLlm(
     return { ingredients: [], steps: [] };
   }
 
+  // Strip the trailing hashtag wall before inference: it is pure noise and
+  // meaningfully slows a long caption down.
+  const trimmed = caption.replace(/(?:\s*#[\p{L}\p{N}_]+)+\s*$/u, '').trim();
+  const input = trimmed.length > MAX_CAPTION_CHARS
+    ? trimmed.slice(0, MAX_CAPTION_CHARS)
+    : trimmed;
+
   let raw: unknown;
   try {
-    const result = await ai.run(MODEL, {
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Caption:\n\n${caption}` },
-      ],
-      response_format: { type: 'json_schema', json_schema: RESPONSE_SCHEMA },
-      max_tokens: 1500,
-      temperature: 0.1,
-    });
+    // The AI binding has no built-in timeout. Without this race, a stalled
+    // inference hangs the whole request — observed at 900+ seconds — and the
+    // client eventually gives up having learned nothing.
+    const result = await Promise.race([
+      ai.run(MODEL, {
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Caption:\n\n${input}` },
+        ],
+        response_format: { type: 'json_schema', json_schema: RESPONSE_SCHEMA },
+        max_tokens: 1500,
+        temperature: 0.1,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI inference timed out')), AI_TIMEOUT_MS),
+      ),
+    ]);
     raw = result.response;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -192,3 +222,4 @@ export async function parseCaptionWithLlm(
 
   return validateAgainstCaption(parsed, caption);
 }
+

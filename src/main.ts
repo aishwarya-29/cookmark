@@ -161,7 +161,14 @@ async function saveUrl(value: string): Promise<void> {
       };
     } else {
       notice = { tone: 'info', text: 'Saved.' };
-      // FR-1.5 — optimistic. The row is durable; extraction runs in background.
+
+      // FR-1.5 — the row is durable now, so show it NOW. Rendering here rather
+      // than after this function returns is what keeps acknowledgement under
+      // 200ms; extraction can take 20s+ and must never gate the first paint.
+      recipes = [outcome.recipe, ...recipes];
+      await render();
+
+      // Extraction runs in the background. Deliberately not awaited.
       void extractRecipe(outcome.recipe.id, undefined, () => void refresh()).then(() =>
         refresh(),
       );
@@ -187,16 +194,23 @@ async function onSubmit(e: SubmitEvent): Promise<void> {
   const value = input.value;
   if (!value.trim()) return;
 
+  // Clear the field before saving: saveUrl() renders as soon as the row is
+  // durable, and render() carries the live field value forward — so clearing
+  // afterwards would be undone by that first paint.
+  input.value = '';
+
   await saveUrl(value);
-  // Clear before any refresh, so value preservation carries the cleared field
-  // forward rather than restoring what we just saved.
+
   if (notice?.tone === 'info') {
-    input.value = '';
     // The clipboard prompt is earned by a successful manual paste — this is
     // the moment its value is self-evident (FR-1.2).
     markManualPasteDone();
+  } else {
+    // Rejected or duplicate: put the text back so it can be corrected.
+    const el = app.querySelector<HTMLInputElement>('#url-input');
+    if (el) el.value = value;
+    await render();
   }
-  await refresh();
   app.querySelector<HTMLInputElement>('#url-input')?.focus();
 }
 

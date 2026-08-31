@@ -33,8 +33,13 @@ const INGREDIENT_HEADING_RE =
 const METHOD_HEADING_RE =
   /^\s*[\p{Extended_Pictographic}\s]*(?:method|instructions?|directions?|steps?|how to(?: make)?|preparation|procedure)\b\s*(?:\([^)]*\))?\s*[-–—:]*\s*$/iu;
 
-/** Sub-headings inside an ingredient block, e.g. "For Masala Paste:". */
-const SUBHEADING_RE = /^\s*(?:for\b.*|.*\bmarinade\b.*|.*\bpaste\b.*|.*\bsauce\b.*)\s*:\s*$/iu;
+/**
+ * Sub-headings inside an ingredient block. The trailing colon is optional:
+ * real captions write both "For Masala Paste:" and "For the Chicken Marinade".
+ * Kept short and "For"-anchored so it cannot swallow a real ingredient line.
+ */
+const SUBHEADING_RE =
+  /^\s*[\p{Extended_Pictographic}\s]*for\s+(?:the\s+)?[\w\s'-]{2,40}\s*:?\s*$/iu;
 
 /** Units we recognise, longest-first so "tbsp" wins before "tb". */
 const UNITS = [
@@ -94,7 +99,7 @@ function parseQuantity(token: string): number | undefined {
     const whole = mixed[1] ? parseInt(mixed[1], 10) : 0;
     return whole + parseInt(mixed[2]!, 10) / parseInt(mixed[3]!, 10);
   }
-  // Ranges ("2-3", "2–3") — take the lower bound, it's the safer default.
+  // Ranges ("2-3", "2–3", "4 –5") — take the lower bound, the safer default.
   const range = t.match(/^(\d+(?:\.\d+)?)\s*[-–—]\s*\d+(?:\.\d+)?$/);
   if (range) return parseFloat(range[1]!);
 
@@ -252,8 +257,10 @@ export function parseCaption(caption: string): ParsedCaption {
       mode = 'method';
       continue;
     }
-    // "For Masala Paste:" — stays within ingredients, not a new section.
-    if (SUBHEADING_RE.test(line) && mode === 'ingredients') continue;
+    // "For Masala Paste:" / "For the Chicken Marinade" — a label within the
+    // ingredient block, not an ingredient. Requiring no digits keeps this from
+    // swallowing a real line like "For 4 people use 2 onions".
+    if (mode === 'ingredients' && SUBHEADING_RE.test(line) && !/\d/.test(line)) continue;
 
     const cleaned = stripHashtags(line).trim();
     if (!cleaned) continue;

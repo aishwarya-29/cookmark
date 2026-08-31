@@ -1,4 +1,5 @@
 import type { Recipe, Ingredient } from '../data/types';
+import { formatIngredient } from '../lib/quantity';
 import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes';
 import { escapeHtml, formatDate, onClick } from './dom';
 import { navigate } from './router';
@@ -10,12 +11,6 @@ import { navigate } from './router';
  * link-only entries, which is exactly where it matters most, because the link
  * back to the reel is the only content there is.
  */
-
-function formatIngredient(ing: Ingredient): string {
-  const qty = ing.quantityText ?? (ing.quantity !== undefined ? String(ing.quantity) : '');
-  const parts = [qty, ing.unit, ing.item].filter(Boolean).join(' ');
-  return ing.note ? `${parts}, ${ing.note}` : parts;
-}
 
 /** Ingredients as editable text — one per line, the format people paste. */
 function ingredientsToText(list: Ingredient[] | undefined): string {

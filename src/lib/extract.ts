@@ -21,8 +21,13 @@ import { parseCaption } from './parse-caption';
 /** How long we allow an optional metadata fetch before giving up on it. */
 const METADATA_TIMEOUT_MS = 8000;
 
-/** Tier 1 includes an LLM round-trip, so it gets a longer budget. */
-const TIER1_TIMEOUT_MS = 30_000;
+/**
+ * Tier 1 does an Instagram fetch AND a 70B model round-trip. Measured latency
+ * is well under this, but the ceiling is generous on purpose: a slow
+ * extraction costs nothing (the save is already durable and the user has moved
+ * on), while a premature timeout throws away a good result.
+ */
+const TIER1_TIMEOUT_MS = 100_000;
 
 export interface ReelMetadata {
   creatorHandle?: string;
@@ -157,6 +162,13 @@ async function runTier1(recipe: Recipe): Promise<Tier1Result> {
           reason: body.error ?? 'This post is private or has been deleted',
         };
       }
+      if (res.status === 429) {
+        return {
+          kind: 'failed',
+          permanent: false,
+          reason: 'Instagram is busy right now — this will retry automatically',
+        };
+      }
       if (!res.ok) {
         return { kind: 'failed', permanent: false, reason: `Worker returned ${res.status}` };
       }
@@ -207,6 +219,10 @@ async function runTier1(recipe: Recipe): Promise<Tier1Result> {
     return { kind: 'none', ...(data.rawCaption ? { caption: data.rawCaption } : {}), meta: data };
   }
 
+  // The model returns no title when the caption opens with a series name or a
+  // hook rather than a dish name. Fall back to the local parser's guess, then
+  // to the creator handle, rather than leaving the provisional "Saved reel".
+  if (!title && data.rawCaption) title = parseCaption(data.rawCaption).title;
   if (title && !edited.has('title')) patch.title = title;
   if (!edited.has('ingredients')) patch.ingredients = ingredients;
   if (!edited.has('steps')) patch.steps = steps;

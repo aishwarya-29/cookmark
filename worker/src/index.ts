@@ -1,4 +1,4 @@
-import { fetchReelMetadata, PermanentFetchError } from './instagram';
+import { fetchReelMetadata, PermanentFetchError, RateLimitedError } from './instagram';
 import { parseCaptionWithLlm, QuotaExhaustedError, type AiBinding } from './llm-parse';
 
 /**
@@ -79,6 +79,7 @@ export default {
       return json({ ok: true }, 200, cors);
     }
 
+
     const wantsParse = url.pathname === '/extract';
     if (url.pathname !== '/metadata' && !wantsParse) {
       return json({ error: 'Not found' }, 404, cors);
@@ -109,6 +110,13 @@ export default {
       if (err instanceof PermanentFetchError) {
         // Private or deleted — the client must not retry this forever.
         return json({ error: err.message, permanent: true }, 404, cors);
+      }
+      if (err instanceof RateLimitedError) {
+        // Retryable, and worth saying so plainly — the user did nothing wrong.
+        return json({ error: err.message, permanent: false, rateLimited: true }, 429, {
+          ...cors,
+          'Retry-After': '300',
+        });
       }
       const reason = err instanceof Error ? err.message : String(err);
       return json({ error: reason, permanent: false }, 502, cors);

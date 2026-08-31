@@ -100,6 +100,23 @@ describe('real caption: Spicy lemon coriander chicken (@chefvpnjadhav)', () => {
   });
 });
 
+describe('section sub-headings', () => {
+  it('drops "For the Chicken Marinade" — no trailing colon', () => {
+    // Regression: these appeared as ingredients because the old pattern
+    // required a colon.
+    const r = parseCaption(f['DbDdLfHIP3q']!.caption);
+    expect(r.ingredients.some((i) => /^for the\b/i.test(i.item))).toBe(false);
+    expect(r.ingredients.some((i) => /^for\b/i.test(i.item))).toBe(false);
+  });
+
+  it('keeps a real ingredient line that happens to start with "For"', () => {
+    const r = parseCaption(
+      'Ingredients:\nFor 4 people use 2 onions\n1 tsp salt\n\nMethod:\nCook it.',
+    );
+    expect(r.ingredients.some((i) => /onions/i.test(i.item))).toBe(true);
+  });
+});
+
 describe('promotional noise', () => {
   it('drops long call-to-action lines rather than treating them as steps', () => {
     // Regression: "Save this recipe and try it today! ... follow @handle"

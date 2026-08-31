@@ -34,6 +34,17 @@ export class PermanentFetchError extends Error {
   }
 }
 
+/**
+ * Instagram is rate-limiting us. Distinct from a generic failure because the
+ * remedy is different: wait and retry, rather than give up on the reel.
+ */
+export class RateLimitedError extends Error {
+  constructor() {
+    super('Instagram is rate-limiting requests — this will retry automatically');
+    this.name = 'RateLimitedError';
+  }
+}
+
 /** Messaging-app UA — the only one that reliably yields OG tags. */
 const PREVIEW_UA = 'WhatsApp/2.23.20.0';
 
@@ -43,14 +54,40 @@ function extractMeta(html: string, property: string, attr = 'property'): string 
   return m?.[1] ? decodeEntities(m[1]) : undefined;
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  quot: '"',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+  nbsp: ' ',
+  hellip: '…',
+  mdash: '—',
+  ndash: '–',
+  lsquo: '‘',
+  rsquo: '’',
+  ldquo: '“',
+  rdquo: '”',
+  amp: '&',
+};
+
+/**
+ * Decode HTML entities in meta tag content.
+ *
+ * Handles named entities and both decimal and hex numeric forms. `&amp;` is
+ * decoded LAST so that a double-encoded `&amp;hellip;` does not first become
+ * `&hellip;` and then get decoded again — and unknown entities are left as-is
+ * rather than being half-eaten (which produced "WAIT FOR THE END&;").
+ */
 function decodeEntities(s: string): string {
   return s
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#x2F;/g, '/')
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+      String.fromCodePoint(parseInt(hex, 16)),
+    )
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (match, name: string) => {
+      const v = NAMED_ENTITIES[name.toLowerCase()];
+      return v !== undefined && name.toLowerCase() !== 'amp' ? v : match;
+    })
     .replace(/&amp;/g, '&');
 }
 
@@ -71,6 +108,11 @@ export async function fetchReelMetadata(
 
   if (res.status === 404 || res.status === 410) {
     throw new PermanentFetchError('This post is private or has been deleted');
+  }
+  if (res.status === 429) {
+    // Datacentre IPs get rate-limited quickly. This is temporary and the
+    // caller should retry later rather than treating the reel as unavailable.
+    throw new RateLimitedError();
   }
   if (!res.ok) {
     throw new Error(`Instagram returned ${res.status}`);

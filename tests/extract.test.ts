@@ -23,6 +23,9 @@ beforeEach(async () => {
   db = new ReelRecipesDb(`extract-db-${counter++}`);
   await db.open();
   localStorage.clear();
+  // Never let the suite hit the real network: it makes tests slow, flaky, and
+  // dependent on Instagram being reachable. Individual tests override this.
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 });
 
 afterEach(() => {
@@ -57,10 +60,12 @@ describe('Tier 3 always succeeds (FR-2.6)', () => {
     await extractRecipe(r.id, db);
 
     const row = await db.recipes.get(r.id);
-    expect(row!.attempts).toHaveLength(1);
-    expect(row!.attempts[0]!.tier).toBe(3);
-    expect(row!.attempts[0]!.outcome).toBe('success');
-    expect(row!.attempts[0]!.reason).toContain('link only');
+    // Tier 1 may also have logged an attempt when a Worker is configured; the
+    // guarantee under test is that Tier 3 always records a settling attempt.
+    const tier3 = row!.attempts.filter((a) => a.tier === 3);
+    expect(tier3).toHaveLength(1);
+    expect(tier3[0]!.outcome).toBe('success');
+    expect(tier3[0]!.reason).toContain('link only');
   });
 
   it('never leaves a row stuck in running', async () => {

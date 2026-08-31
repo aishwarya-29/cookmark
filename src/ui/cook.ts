@@ -1,4 +1,5 @@
-import type { Recipe, Ingredient } from '../data/types';
+import type { Recipe } from '../data/types';
+import { formatIngredient } from '../lib/quantity';
 import { updateRecipe } from '../data/recipes';
 import { escapeHtml, onClick } from './dom';
 import { navigate } from './router';
@@ -15,12 +16,6 @@ import { requestWakeLock, releaseWakeLock, wakeLockStatus } from '../lib/wakeloc
  *     database on every tap rather than held in memory
  *   - Screen must not sleep
  */
-
-function formatIngredient(ing: Ingredient): string {
-  const qty = ing.quantityText ?? (ing.quantity !== undefined ? String(ing.quantity) : '');
-  const parts = [qty, ing.unit, ing.item].filter(Boolean).join(' ');
-  return ing.note ? `${parts}, ${ing.note}` : parts;
-}
 
 export async function enterCookMode(): Promise<void> {
   document.body.classList.add('cooking');
