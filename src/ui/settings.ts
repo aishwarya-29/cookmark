@@ -85,14 +85,14 @@ export function bindSettings(root: ParentNode, onChange: () => void): void {
   onClick(root, '[data-action="export-json"]', async () => {
     const backup = await exportJson();
     download(
-      `reel-recipes-${stamp()}.json`,
+      `cookmark-${stamp()}.json`,
       JSON.stringify(backup, null, 2),
       'application/json',
     );
   });
 
   onClick(root, '[data-action="export-md"]', async () => {
-    download(`reel-recipes-${stamp()}.md`, await exportMarkdown(), 'text/markdown');
+    download(`cookmark-${stamp()}.md`, await exportMarkdown(), 'text/markdown');
   });
 
   const fileInput = root.querySelector<HTMLInputElement>('#import-file');

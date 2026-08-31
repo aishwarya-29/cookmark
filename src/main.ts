@@ -189,7 +189,7 @@ async function renderRoute(): Promise<void> {
   }
 
   if (route.name === 'home') {
-    renderChrome(route, 'Reel Recipes');
+    renderChrome(route, 'Cookmark');
     app.innerHTML = homeHtml(recipes, collections);
     document.body.classList.toggle('sheet-open', sheetOpen);
 

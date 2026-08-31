@@ -1,7 +1,7 @@
 {
-  "name": "Reel Recipes",
-  "short_name": "Recipes",
-  "description": "Turn saved Instagram reels into a searchable recipe library.",
+  "name": "Cookmark",
+  "short_name": "Cookmark",
+  "description": "Bookmark cooking reels, then actually cook from them.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

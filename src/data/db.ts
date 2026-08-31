@@ -17,6 +17,12 @@ export class ReelRecipesDb extends Dexie {
   recipes!: Table<Recipe, string>;
   collections!: Table<Collection, string>;
 
+  /**
+   * DO NOT RENAME. The app is called Cookmark now, but this string is the
+   * IndexedDB database name: changing it would orphan every recipe already
+   * saved on the device, with no way to get them back. The user-facing name
+   * and the storage key are deliberately allowed to diverge.
+   */
   constructor(name = 'reel-recipes') {
     super(name);
 

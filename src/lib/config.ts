@@ -10,6 +10,7 @@
  * and therefore has nothing to disable. It is the floor.
  */
 
+/** DO NOT RENAME — see the note in db.ts. Renaming resets the user's tiers. */
 const STORAGE_KEY = 'reel-recipes:tiers';
 
 export interface TierConfig {

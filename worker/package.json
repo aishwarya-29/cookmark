@@ -1,5 +1,5 @@
 {
-  "name": "reel-recipes-worker",
+  "name": "cookmark-worker",
   "private": true,
   "version": "0.1.0",
   "scripts": {

@@ -14,6 +14,7 @@ import { formatIngredient } from '../lib/quantity';
  * are slightly wrong and must never destroy what is already there.
  */
 
+/** DO NOT RENAME — backups exported before the rename must still import. */
 const FORMAT = 'reel-recipes-backup';
 const FORMAT_VERSION = 1;
 
@@ -69,7 +70,7 @@ export async function exportMarkdown(db: ReelRecipesDb = defaultDb): Promise<str
   }
 
   const parts = [
-    `# Reel Recipes`,
+    `# Cookmark`,
     ``,
     `${recipes.length} ${recipes.length === 1 ? 'recipe' : 'recipes'}, exported ${new Date().toLocaleDateString()}.`,
     ``,
@@ -134,7 +135,7 @@ export async function importJson(
 
   const backup = parsed as Partial<Backup>;
   if (!backup || typeof backup !== 'object' || !Array.isArray(backup.recipes)) {
-    throw new InvalidBackupError('That does not look like a Reel Recipes export.');
+    throw new InvalidBackupError('That does not look like a Cookmark export.');
   }
 
   const existing = await db.recipes.toArray();

@@ -14,6 +14,8 @@
 
 import { tryCanonicaliseInstagramUrl } from './url';
 
+/* DO NOT RENAME — see the note in db.ts. Renaming would re-prompt for
+   clipboard access the user has already declined. */
 const ASKED_KEY = 'reel-recipes:clipboard-asked';
 const EARNED_KEY = 'reel-recipes:manual-paste-done';
 const DECLINED_KEY = 'reel-recipes:clipboard-declined';

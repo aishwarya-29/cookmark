@@ -1,4 +1,4 @@
-# Reel Recipes
+# Cookmark
 
 Turn saved Instagram cooking reels into a searchable recipe library you can
 actually cook from.
