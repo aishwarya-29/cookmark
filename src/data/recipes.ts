@@ -3,6 +3,7 @@ import { db as defaultDb } from './db';
 import type { Recipe } from './types';
 import { canonicaliseInstagramUrl, type CanonicalUrl } from '../lib/url';
 import { recipeSearchTerms } from '../lib/ingredient-terms';
+import { newId } from '../lib/id';
 
 /**
  * The save path — PRD NFR-3.1, the product's fundamental promise.
@@ -24,11 +25,6 @@ function provisionalTitle(parsed: CanonicalUrl, savedAt: number): string {
     month: 'short',
   });
   return parsed.creatorHandle ? `@${parsed.creatorHandle} — ${date}` : `Saved reel — ${date}`;
-}
-
-function newId(): string {
-  // crypto.randomUUID is available in all PWA-capable browsers and in Node 19+.
-  return crypto.randomUUID();
 }
 
 /**
