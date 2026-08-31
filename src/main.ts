@@ -17,6 +17,7 @@ import {
   isSearchActive, emptySearch, type SearchState,
 } from './ui/search-ui';
 import { allTags } from './lib/search';
+import { headerHtml, tabBarHtml, pasteSheetHtml } from './ui/chrome';
 
 /**
  * App shell: owns routing, the paste bar, and the single render entry point.
@@ -25,7 +26,10 @@ import { allTags } from './lib/search';
 
 type Notice = { tone: 'info' | 'duplicate' | 'error'; text: string } | null;
 
-const app = document.querySelector<HTMLDivElement>('#app')!;
+const app = document.querySelector<HTMLElement>('#app')!;
+const chromeTop = document.querySelector<HTMLDivElement>('#chrome-top')!;
+const chromeBottom = document.querySelector<HTMLDivElement>('#chrome-bottom')!;
+const sheetRoot = document.querySelector<HTMLDivElement>('#sheet-root')!;
 
 let recipes: Recipe[] = [];
 let notice: Notice = null;
@@ -36,22 +40,12 @@ let clipboardOffer: string | null = null;
 let cooking = false;
 /** Current search / filter state (FR-3.2, FR-3.3, FR-3.4). */
 let search: SearchState = { ...emptySearch };
+/** Whether the paste sheet is open. */
+let sheetOpen = false;
 
 function libraryShellHtml(): string {
   const noticeHtml = notice
     ? `<div class="notice ${notice.tone}">${escapeHtml(notice.text)}</div>`
-    : '';
-
-  // Never save silently — always show what was found and let the user confirm.
-  const offerHtml = clipboardOffer
-    ? `<div class="notice offer">
-         <p class="small">Found a reel link on your clipboard:</p>
-         <p class="offer-url">${escapeHtml(clipboardOffer)}</p>
-         <div class="action-row">
-           <button data-action="accept-clip">Save it</button>
-           <button class="subtle" data-action="dismiss-clip">Not now</button>
-         </div>
-       </div>`
     : '';
 
   // Ingredient match replaces the normal list when active — a different
@@ -69,33 +63,59 @@ function libraryShellHtml(): string {
     : `${recipes.length} saved`;
 
   return `
-    <h1>Reel Recipes</h1>
-    <p class="subtitle">Paste a link. It's saved before anything else happens.</p>
-
-    <!--
-      type="text", not type="url": native URL validation silently blocks submit
-      on input we handle better ourselves, and replaces our wording with a
-      browser tooltip we don't control.
-    -->
-    <form class="paste-form" id="paste-form" novalidate>
-      <input id="url-input" type="text" inputmode="url" autocomplete="off"
-             autocapitalize="off" spellcheck="false"
-             placeholder="https://instagram.com/reel/…"
-             aria-label="Instagram reel link" />
-      <button type="submit" ${saving ? 'disabled' : ''}>Save</button>
-    </form>
-
-    ${offerHtml}
     ${noticeHtml}
-
     ${searchPanelHtml(recipes, search)}
 
     <div class="library-head">
-      <p class="section-label">Library — ${countLabel}</p>
-      <button class="subtle" data-action="new-manual">+ Write one</button>
+      <p class="section-label">${escapeHtml(countLabel)}</p>
     </div>
     ${listHtml}
   `;
+}
+
+/** Render the chrome (header + tab bar + sheet), which lives outside #app. */
+function renderChrome(route: ReturnType<typeof currentRoute>, title: string): void {
+  // Cook mode is a full takeover: no header, no tabs, nothing to mis-tap.
+  if (route.name === 'cook') {
+    chromeTop.innerHTML = '';
+    chromeBottom.innerHTML = '';
+    sheetRoot.innerHTML = '';
+    return;
+  }
+
+  const back = route.name === 'library' ? undefined : '#/';
+  chromeTop.innerHTML = headerHtml(title, back ? { back } : {});
+  chromeBottom.innerHTML = route.name === 'library' ? tabBarHtml('library') : '';
+  sheetRoot.innerHTML = route.name === 'library' ? pasteSheetHtml(sheetOpen, clipboardOffer) : '';
+
+  onClick(chromeBottom, '[data-tab="add"]', () => {
+    sheetOpen = true;
+    void render();
+    // Focus after the sheet's transition, so iOS doesn't scroll mid-animation.
+    setTimeout(() => sheetRoot.querySelector<HTMLInputElement>('#url-input')?.focus(), 260);
+  });
+
+  onClick(sheetRoot, '[data-close-sheet]', () => {
+    sheetOpen = false;
+    void render();
+  });
+
+  const form = sheetRoot.querySelector<HTMLFormElement>('#paste-form');
+  form?.addEventListener('submit', onSubmit);
+
+  onClick(sheetRoot, '[data-action="accept-clip"]', () => void acceptClipboardOffer());
+  onClick(sheetRoot, '[data-action="dismiss-clip"]', () => {
+    // Declined for good — no nag prompts (FR-1.2).
+    clipboardOffer = null;
+    markClipboardDeclined();
+    void render();
+  });
+  onClick(sheetRoot, '[data-action="new-manual"]', async () => {
+    sheetOpen = false;
+    const r = await createManualRecipe('Untitled recipe');
+    await refresh();
+    navigate(`#/edit/${r.id}`);
+  });
 }
 
 async function render(): Promise<void> {
@@ -110,20 +130,22 @@ async function render(): Promise<void> {
 
   if (route.name === 'library') {
     // Preserve what the user is typing across background refreshes — for every
-    // text field on this screen, not just the paste bar.
+    // text field on screen, including those in the sheet.
     const FIELDS = ['#url-input', '#search-text', '#cook-with'];
     const preserved = FIELDS.map((sel) => {
-      const el = app.querySelector<HTMLInputElement>(sel);
+      const el = document.querySelector<HTMLInputElement>(sel);
       return el
         ? { sel, value: el.value, focused: document.activeElement === el, pos: el.selectionStart }
         : null;
     });
 
+    renderChrome(route, 'Reel Recipes');
     app.innerHTML = libraryShellHtml();
+    document.body.classList.toggle('sheet-open', sheetOpen);
 
     for (const p of preserved) {
       if (!p) continue;
-      const el = app.querySelector<HTMLInputElement>(p.sel);
+      const el = document.querySelector<HTMLInputElement>(p.sel);
       if (!el) continue;
       el.value = p.value;
       if (p.focused) {
@@ -136,21 +158,7 @@ async function render(): Promise<void> {
       }
     }
 
-    app.querySelector<HTMLFormElement>('#paste-form')!.addEventListener('submit', onSubmit);
-    onClick(app, '[data-action="accept-clip"]', () => void acceptClipboardOffer());
-    onClick(app, '[data-action="dismiss-clip"]', () => {
-      clipboardOffer = null;
-      markClipboardDeclined();
-      void render();
-    });
-    onClick(app, '[data-action="new-manual"]', async () => {
-      const r = await createManualRecipe('Untitled recipe');
-      await refresh();
-      navigate(`#/edit/${r.id}`);
-    });
-
     // --- Search and filters (FR-3.2, FR-3.3, FR-3.4) ---
-    // Filter as the user types; everything is in memory so this is instant.
     const searchInput = app.querySelector<HTMLInputElement>('#search-text');
     searchInput?.addEventListener('input', () => {
       search = { ...search, text: searchInput.value };
@@ -176,23 +184,32 @@ async function render(): Promise<void> {
       void render();
     });
 
+    onClick(app, '[data-action="open-sheet"]', () => {
+      sheetOpen = true;
+      void render();
+    });
+
     return;
   }
 
   // Detail, edit, and cook all need a loaded recipe.
   const r = await getRecipe(route.id);
   if (!r) {
-    app.innerHTML = `
-      <p><a href="#/" class="back">← Library</a></p>
-      <div class="empty">That recipe is no longer here.</div>`;
+    renderChrome(route, 'Not found');
+    app.innerHTML = `<div class="empty">That recipe is no longer here.</div>`;
     return;
   }
 
+  document.body.classList.remove('sheet-open');
+
   if (route.name === 'recipe') {
+    renderChrome(route, r.title);
     renderRecipe(app, r, () => void refresh(), allTags(recipes).map((t) => t.tag));
   } else if (route.name === 'edit') {
+    renderChrome(route, 'Edit');
     renderEdit(app, r, () => void refresh());
   } else {
+    renderChrome(route, r.title);
     if (!cooking) {
       cooking = true;
       await enterCookMode();
@@ -247,7 +264,7 @@ async function onSubmit(e: SubmitEvent): Promise<void> {
   e.preventDefault();
   if (saving) return;
 
-  const input = app.querySelector<HTMLInputElement>('#url-input')!;
+  const input = document.querySelector<HTMLInputElement>('#url-input')!;
   const value = input.value;
   if (!value.trim()) return;
 
@@ -262,13 +279,16 @@ async function onSubmit(e: SubmitEvent): Promise<void> {
     // The clipboard prompt is earned by a successful manual paste — this is
     // the moment its value is self-evident (FR-1.2).
     markManualPasteDone();
+    // Close the sheet so the saved recipe is visible immediately.
+    sheetOpen = false;
+    await render();
   } else {
     // Rejected or duplicate: put the text back so it can be corrected.
     const el = app.querySelector<HTMLInputElement>('#url-input');
     if (el) el.value = value;
     await render();
   }
-  app.querySelector<HTMLInputElement>('#url-input')?.focus();
+  document.querySelector<HTMLInputElement>('#url-input')?.focus();
 }
 
 async function acceptClipboardOffer(): Promise<void> {

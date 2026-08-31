@@ -80,10 +80,20 @@ export function renderRecipe(
          </p>`
       : '';
 
-  root.innerHTML = `
-    <p><a href="#/" class="back">← Library</a></p>
+  // Full-bleed hero: the reel's own thumbnail, with the title overlaid on a
+  // gradient so it stays legible over any image.
+  const hero = r.thumbnailUrl
+    ? `<div class="hero">
+         <img src="${escapeHtml(r.thumbnailUrl)}" alt="" referrerpolicy="no-referrer"
+              onerror="this.closest('.hero').classList.add('broken')" />
+         <div class="hero-fade"></div>
+       </div>
+       <h1>${escapeHtml(r.title)}</h1>`
+    : `<h1>${escapeHtml(r.title)}</h1>`;
 
-    <h1>${escapeHtml(r.title)}</h1>
+  root.innerHTML = `
+    ${hero}
+
     ${attributionHtml(r)}
     <p class="dim small">Saved ${formatDate(r.savedAt)}</p>
 
@@ -110,10 +120,7 @@ export function renderRecipe(
              </ol>`
           : ''
       }
-      <div class="action-row">
-        <button data-action="cook">Cook this</button>
-        <button class="subtle" data-action="edit">Edit</button>
-      </div>`
+      `
         : emptyRecipeInvitation()
     }
 
@@ -133,6 +140,20 @@ export function renderRecipe(
     <div class="action-row">
       <button class="subtle danger" data-action="delete">Delete recipe</button>
     </div>
+
+    ${
+      hasContent
+        ? `<div class="sticky-actions">
+             <button class="subtle" data-action="edit">Edit</button>
+             <button class="primary-cta" data-action="cook">
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                 <path d="M5 3l14 9-14 9V3z" fill="currentColor"/>
+               </svg>
+               Start cooking
+             </button>
+           </div>`
+        : ''
+    }
   `;
 
   bindCategoryActions(root, r, knownTags, onChange);

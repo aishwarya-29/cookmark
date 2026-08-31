@@ -104,10 +104,239 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* --- App shell ---
+ * A fixed frame with swapping content, rather than one long document. The
+ * header and tab bar sit outside #app so they never re-render with the view.
+ */
+
 #app {
   max-width: 640px;
   margin: 0 auto;
-  padding: 24px 16px 80px;
+  /* Top: clears the sticky header. Bottom: clears the tab bar + home indicator. */
+  padding: calc(var(--topbar-h) + 8px) 16px calc(var(--tabbar-h) + 28px);
+  animation: view-in 0.26s var(--ease);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+:root {
+  --topbar-h: 54px;
+  --tabbar-h: 62px;
+}
+
+/* --- Sticky header --- */
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  height: calc(var(--topbar-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Translucent so content scrolling under it reads as depth, not a seam. */
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.topbar-title {
+  font-size: var(--step-1);
+  font-weight: 640;
+  letter-spacing: -0.014em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-back {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: -10px;
+  color: var(--text);
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.topbar-back:active {
+  background: var(--surface-raised);
+}
+
+/* --- Bottom tab bar --- */
+
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px calc(6px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.tab {
+  flex: 1;
+  max-width: 160px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  font-size: 0.6875rem;
+  font-weight: 560;
+  letter-spacing: 0.01em;
+  color: var(--text-faint);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: color 0.15s var(--ease);
+}
+.tab svg {
+  width: 23px;
+  height: 23px;
+}
+.tab.active {
+  color: var(--accent);
+}
+.tab:active {
+  background: var(--surface);
+}
+
+/* --- Paste sheet ---
+ * Capture lives here rather than permanently occupying the top of the
+ * library. It rises from the tab bar, where the thumb already is.
+ */
+
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s var(--ease);
+}
+.sheet-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+  background: var(--bg-elevated);
+  border-radius: 22px 22px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  box-shadow: 0 -8px 40px -12px rgb(0 0 0 / 0.5);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.3, 0, 0, 1);
+  visibility: hidden;
+}
+.sheet.open {
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.sheet-grip {
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  margin: 0 auto 16px;
+}
+
+.sheet-title {
+  font-size: var(--step-2);
+  font-weight: 640;
+  letter-spacing: -0.016em;
+  text-transform: none;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+.sheet-hint {
+  margin: 12px 0 0;
+  line-height: 1.5;
+}
+
+.sheet-alt {
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* Clipboard offer — never saves silently, always shows what was found. */
+.clip-offer {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.clip-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  min-height: auto;
+  text-align: left;
+  background: var(--accent-quiet);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text);
+  overflow: hidden;
+}
+.clip-label {
+  font-size: 0.6875rem;
+  font-weight: 640;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.clip-url {
+  font-size: var(--step--1);
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.clip-dismiss {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  font-size: var(--step--1);
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+body.sheet-open {
+  overflow: hidden;
 }
 
 /* --- Headings --- */
@@ -321,7 +550,7 @@ a.back:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin: 18px 0 6px;
+  margin: 4px 0 6px;
 }
 
 .search-panel input {
@@ -516,7 +745,7 @@ button.chip:hover {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin: 28px 0 12px;
+  margin: 18px 0 10px;
 }
 
 .section-label {
@@ -570,7 +799,7 @@ button.chip:hover {
 .card-thumb {
   display: block;
   margin: 0 -15px 14px;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 2 / 1;
   background: var(--surface-raised);
   overflow: hidden;
 }
@@ -691,6 +920,126 @@ button.chip:hover {
 }
 
 /* --- Recipe detail --- */
+
+/* --- Recipe hero: full-bleed, title overlaid --- */
+
+.hero {
+  position: relative;
+  /* Break out of #app's padding to reach the screen edges. */
+  margin: calc(-1 * (var(--topbar-h) + 8px)) -16px 16px;
+  aspect-ratio: 16 / 9;
+  max-height: 34vh;
+  overflow: hidden;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: flex-end;
+}
+.hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Gradient keeps the title legible over any image. */
+.hero-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 55%, transparent) 0%,
+    transparent 32%,
+    transparent 45%,
+    color-mix(in srgb, var(--bg) 88%, transparent) 88%,
+    var(--bg) 100%
+  );
+}
+.hero-title {
+  position: relative;
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.18;
+  color: #fff;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.5);
+}
+/* Broken or blocked image: fall back to a plain heading, no empty box. */
+.hero.broken {
+  aspect-ratio: auto;
+  max-height: none;
+  background: none;
+  margin-top: 0;
+}
+.hero.broken img,
+.hero.broken .hero-fade {
+  display: none;
+}
+.hero.broken .hero-title {
+  color: var(--text);
+  text-shadow: none;
+  padding: 0 0 4px;
+  font-size: var(--step-3);
+}
+
+/* --- Sticky action bar: "Start cooking" always in the thumb zone --- */
+
+.sticky-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  gap: 9px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.primary-cta {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+.sticky-actions .subtle {
+  min-height: var(--touch);
+  flex: 0 0 auto;
+}
+
+/* --- First run: one glance, no tutorial (PRD §11 Q5) --- */
+
+.first-run {
+  border: none;
+  padding: 48px 24px;
+}
+.first-run-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 18px;
+  color: var(--text-faint);
+}
+.first-run-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.first-run strong {
+  font-size: var(--step-2);
+  font-weight: 640;
+  letter-spacing: -0.014em;
+  color: var(--text);
+}
+.first-run button {
+  margin-top: 20px;
+}
 
 .attribution {
   margin: 6px 0;
@@ -816,8 +1165,9 @@ body.cooking {
   --touch: 56px;
   background: var(--bg);
 }
+/* Full takeover: no header, no tab bar, nothing to mis-tap with wet hands. */
 body.cooking #app {
-  padding: 16px 16px 32px;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
 }
 
 /* Wet hands, imprecise taps: NOTHING in cook mode may fall below the 48px

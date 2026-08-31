@@ -2,14 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5"
+    />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#111214" />
+    <meta name="theme-color" content="#12100e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fdfcfa" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Reel Recipes</title>
     <link rel="stylesheet" href="/src/ui/styles.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <!--
+      Chrome lives outside #app so it never re-renders with the view — that is
+      what keeps the tab bar from flickering on every navigation.
+    -->
+    <div id="chrome-top"></div>
+    <main id="app"></main>
+    <div id="chrome-bottom"></div>
+    <div id="sheet-root"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

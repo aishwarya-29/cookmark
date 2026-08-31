@@ -136,9 +136,17 @@ export function libraryHtml(recipes: Recipe[]): string {
     // First run — the most important screen in the app. One sentence, no
     // tutorial (PRD §11 Q5).
     return `
-      <div class="empty">
-        <p><strong>Nothing saved yet.</strong></p>
-        <p>Copy a reel link in Instagram, then paste it above.</p>
+      <div class="empty first-run">
+        <div class="first-run-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor"
+                  stroke-width="1.5"/>
+            <path d="M10 8.5l5.5 3.5L10 15.5v-7z" fill="currentColor"/>
+          </svg>
+        </div>
+        <p><strong>Your library is empty</strong></p>
+        <p class="dim">Copy a reel link in Instagram, then tap Add.</p>
+        <button data-action="open-sheet">Save your first reel</button>
       </div>`;
   }
   return `<ul class="card-list">${recipes.map(cardHtml).join('')}</ul>`;
