@@ -51,6 +51,41 @@ function attributionHtml(r: Recipe): string {
     </p>`;
 }
 
+/**
+ * Draft banner for a transcript-derived recipe.
+ *
+ * The model was allowed to infer here, so this must never look like a settled
+ * recipe. It names what was guessed and offers one tap to confirm — because
+ * an unverified recipe the user has checked is just a recipe.
+ */
+function draftBannerHtml(r: Recipe): string {
+  if (!r.unverified) return '';
+
+  const conf =
+    r.confidence === 'high'
+      ? 'Most of this was clear in the audio.'
+      : r.confidence === 'medium'
+        ? 'The gist was clear; some amounts were filled in.'
+        : 'The audio was hard to make out, so this is a rough guess.';
+
+  return `
+    <div class="draft-banner">
+      <p class="draft-head">Worked out from the audio — worth checking</p>
+      <p class="dim small">${conf}</p>
+      ${
+        r.assumptions?.length
+          ? `<ul class="draft-assumptions">
+               ${r.assumptions.map((a) => `<li>${escapeHtml(a)}</li>`).join('')}
+             </ul>`
+          : ''
+      }
+      <div class="action-row">
+        <button class="subtle" data-action="confirm-draft">Looks right</button>
+        <button class="subtle" data-action="edit">Fix it</button>
+      </div>
+    </div>`;
+}
+
 /** A link-only entry is a valid outcome — this must not read as a failure. */
 function emptyRecipeInvitation(): string {
   return `
@@ -99,6 +134,7 @@ export function renderRecipe(
     ${attributionHtml(r)}
     <p class="dim small">Saved ${formatDate(r.savedAt)}</p>
 
+    ${draftBannerHtml(r)}
     ${collectionsRowHtml(r, collections)}
     ${categoriesHtml(r)}
     ${suggestionsHtml(r)}
@@ -125,6 +161,15 @@ export function renderRecipe(
       }
       `
         : emptyRecipeInvitation()
+    }
+
+    ${
+      r.rawTranscript
+        ? `<details class="raw-caption">
+             <summary>What was said in the reel</summary>
+             <pre>${escapeHtml(r.rawTranscript)}</pre>
+           </details>`
+        : ''
     }
 
     ${
@@ -164,6 +209,20 @@ export function renderRecipe(
 
   onClick(root, '[data-action="cook"]', () => navigate(`#/cook/${r.id}`));
   onClick(root, '[data-action="edit"]', () => navigate(`#/edit/${r.id}`));
+  onClick(root, '[data-action="confirm-draft"]', async () => {
+    // Confirmed by a human, so it is no longer a draft. Recording the fields
+    // as user-owned also protects them from a later re-extraction (FR-2.10).
+    await updateRecipe(r.id, {
+      unverified: false,
+      confidence: undefined,
+      assumptions: undefined,
+      manuallyEditedFields: [
+        ...new Set([...(r.manuallyEditedFields ?? []), 'ingredients', 'steps']),
+      ],
+    });
+    onChange();
+  });
+
   onClick(root, '[data-action="re-extract"]', async (el) => {
     // Re-extraction never destroys manual edits (FR-2.9) — every write below
     // skips fields listed in manuallyEditedFields — so no confirmation is

@@ -47,11 +47,12 @@ export function statusBadge(r: Recipe): string {
     case 'caption':
       return '<span class="badge good">recipe from caption</span>';
     case 'audio':
-      return '<span class="badge good">recipe from audio</span>';
+      // Never "good" — a transcript-derived recipe is a draft to check.
+      return '<span class="badge draft">from audio — check it</span>';
     case 'audio_translated':
-      return `<span class="badge good">translated${
-        r.sourceLanguage ? ` from ${escapeHtml(r.sourceLanguage)}` : ''
-      }</span>`;
+      return `<span class="badge draft">from audio${
+        r.sourceLanguage ? `, ${escapeHtml(r.sourceLanguage)}` : ''
+      } — check it</span>`;
     case 'manual':
       return '<span class="badge good">added by you</span>';
     default:

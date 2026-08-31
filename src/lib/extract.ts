@@ -29,6 +29,12 @@ const METADATA_TIMEOUT_MS = 8000;
  */
 const TIER1_TIMEOUT_MS = 100_000;
 
+/**
+ * Tier 2 fetches a transcript from a third party AND runs a 70B model.
+ * Measured at 24-53s end to end, so the ceiling is deliberately generous.
+ */
+const TIER2_TIMEOUT_MS = 180_000;
+
 export interface ReelMetadata {
   creatorHandle?: string;
   thumbnailUrl?: string;
@@ -266,9 +272,117 @@ async function runTier1(recipe: Recipe): Promise<Tier1Result> {
   };
 }
 
-/** Tier 2 — audio. Built in Step 5. */
-async function runTier2(_recipe: Recipe): Promise<'not_implemented'> {
-  return 'not_implemented';
+interface TranscribeResponse {
+  transcript?: string;
+  transcriptLang?: string;
+  title?: string;
+  ingredients?: Ingredient[];
+  steps?: string[];
+  cuisine?: string;
+  mealType?: string;
+  tags?: string[];
+  sourceLanguage?: string;
+  translated?: boolean;
+  confidence?: 'high' | 'medium' | 'low';
+  assumptions?: string[];
+  error?: string;
+}
+
+type Tier2Result =
+  | { kind: 'skipped' }
+  | { kind: 'complete' | 'partial'; patch: Partial<Recipe>; attempt: ExtractionAttempt }
+  | { kind: 'none'; transcript?: string }
+  | { kind: 'failed'; reason: string };
+
+/**
+ * Tier 2 — AUDIO (FR-2.4).
+ *
+ * Reconstructs a recipe from the reel's spoken transcript. Unlike Tier 1 this
+ * result is a DRAFT: speech recognition on code-switched Tamil/Telugu/English
+ * is unreliable, so the model is permitted to infer, and everything it
+ * produces is flagged `unverified` for the user to check against the reel.
+ */
+async function runTier2(recipe: Recipe): Promise<Tier2Result> {
+  if (!WORKER_URL) return { kind: 'skipped' };
+
+  let data: TranscribeResponse;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIER2_TIMEOUT_MS);
+    try {
+      const res = await fetch(
+        `${WORKER_URL}/transcribe?url=${encodeURIComponent(recipe.sourceUrl)}`,
+        { signal: controller.signal },
+      );
+      if (res.status === 501) return { kind: 'skipped' };
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        return { kind: 'failed', reason: body.error ?? `Transcription returned ${res.status}` };
+      }
+      data = (await res.json()) as TranscribeResponse;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (err) {
+    return {
+      kind: 'failed',
+      reason:
+        err instanceof Error && err.name === 'AbortError'
+          ? 'Transcription timed out'
+          : 'Could not reach the transcription service',
+    };
+  }
+
+  const ingredients = data.ingredients ?? [];
+  const steps = data.steps ?? [];
+  const qualifies = ingredients.length >= 2 && steps.length >= 1;
+  const isPartial = ingredients.length >= 2 && steps.length === 0;
+
+  if (!qualifies && !isPartial) {
+    return { kind: 'none', ...(data.transcript ? { transcript: data.transcript } : {}) };
+  }
+
+  const edited = new Set(recipe.manuallyEditedFields ?? []);
+  const patch: Partial<Recipe> = {
+    // Always kept, so the user can read what was actually heard.
+    ...(data.transcript ? { rawTranscript: data.transcript } : {}),
+    // The honest part: this is a reconstruction, not a reading.
+    unverified: true,
+    ...(data.confidence ? { confidence: data.confidence } : {}),
+    ...(data.assumptions?.length ? { assumptions: data.assumptions } : {}),
+    extractionMethod: data.translated ? 'audio_translated' : 'audio',
+    status: qualifies ? 'complete' : 'partial',
+    extractionState: 'settled',
+    activeTier: undefined,
+  };
+
+  if (data.title && !edited.has('title')) patch.title = data.title;
+  if (!edited.has('ingredients')) patch.ingredients = ingredients;
+  if (!edited.has('steps')) patch.steps = steps;
+  if (data.sourceLanguage ?? data.transcriptLang) {
+    patch.sourceLanguage = data.sourceLanguage ?? data.transcriptLang;
+  }
+
+  // Categories stay suggestions, exactly as with captions (FR-3.7).
+  const suggested: NonNullable<Recipe['suggested']> = {};
+  if (data.cuisine && !recipe.cuisine) suggested.cuisine = data.cuisine;
+  if (data.mealType && !recipe.mealType) suggested.mealType = data.mealType;
+  const newTags = (data.tags ?? []).filter((t) => !(recipe.tags ?? []).includes(t));
+  if (newTags.length) suggested.tags = newTags;
+  if (suggested.cuisine || suggested.mealType || suggested.tags?.length) {
+    patch.suggested = suggested;
+  }
+
+  return {
+    kind: qualifies ? 'complete' : 'partial',
+    patch,
+    attempt: {
+      tier: 2,
+      at: Date.now(),
+      outcome: qualifies ? 'success' : 'partial',
+      route: `transcript (${data.confidence ?? 'unknown'} confidence)`,
+    },
+  };
 }
 
 /**
@@ -371,9 +485,43 @@ export async function extractRecipe(
     if (tiers.audio) {
       await updateRecipe(recipeId, { activeTier: 2 }, db);
       onProgress?.();
-      const r2 = await runTier2(recipe);
-      if (r2 !== 'not_implemented') {
-        // Step 5 handles the success path here.
+
+      const current = (await db.recipes.get(recipeId)) ?? recipe;
+      const r2 = await runTier2(current);
+
+      if (r2.kind === 'complete' || r2.kind === 'partial') {
+        await updateRecipe(
+          recipeId,
+          { ...r2.patch, attempts: [...current.attempts, r2.attempt] },
+          db,
+        );
+        return;
+      }
+
+      if (r2.kind === 'failed' || r2.kind === 'none') {
+        await updateRecipe(
+          recipeId,
+          {
+            // Keep the transcript even when no recipe came out of it — the
+            // user may still want to read what was said.
+            ...(r2.kind === 'none' && r2.transcript
+              ? { rawTranscript: r2.transcript }
+              : {}),
+            attempts: [
+              ...current.attempts,
+              {
+                tier: 2,
+                at: Date.now(),
+                outcome: 'failure',
+                reason:
+                  r2.kind === 'failed'
+                    ? r2.reason
+                    : 'No recipe could be made out from the audio',
+              },
+            ],
+          },
+          db,
+        );
       }
     }
 

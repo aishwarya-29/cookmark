@@ -1,5 +1,7 @@
 import { fetchReelMetadata, PermanentFetchError, RateLimitedError } from './instagram';
 import { parseCaptionWithLlm, QuotaExhaustedError, type AiBinding } from './llm-parse';
+import { parseTranscriptWithLlm } from './transcript-parse';
+import { fetchTranscript, TranscriptUnavailableError } from './transcript';
 
 /**
  * Extraction Worker.
@@ -17,6 +19,12 @@ export interface Env {
   AI: AiBinding;
   /** Comma-separated origins allowed to call this Worker. */
   ALLOWED_ORIGINS?: string;
+  /**
+   * Transcription API key (Tier 2). A secret, never a var — it must not end
+   * up in the repo or on the user's device. Absent means Tier 2 is simply
+   * unavailable, which the cascade already handles.
+   */
+  TRANSCRIPT_API_KEY?: string;
 }
 
 interface ExtractResponse {
@@ -96,6 +104,39 @@ export default {
       return json({ ok: true }, 200, cors);
     }
 
+
+
+    // --- Tier 2: transcript (FR-2.4) ---
+    if (url.pathname === '/transcribe') {
+      const target = url.searchParams.get('url');
+      if (!target) return json({ error: 'Missing url parameter' }, 400, cors);
+      if (!env.TRANSCRIPT_API_KEY) {
+        return json({ error: 'Transcription is not configured', permanent: true }, 501, cors);
+      }
+      try {
+        const t = await fetchTranscript(target, env.TRANSCRIPT_API_KEY);
+        const parsed = await parseTranscriptWithLlm(env.AI, t.text);
+        return json(
+          {
+            transcript: t.text,
+            transcriptLang: t.lang,
+            ...parsed,
+            route: 'transcript',
+          },
+          200,
+          cors,
+        );
+      } catch (err) {
+        if (err instanceof TranscriptUnavailableError) {
+          return json({ error: err.message, permanent: false }, 502, cors);
+        }
+        if (err instanceof QuotaExhaustedError) {
+          return json({ error: 'Daily AI allowance used up', permanent: false }, 429, cors);
+        }
+        const reason = err instanceof Error ? err.message : String(err);
+        return json({ error: reason, permanent: false }, 502, cors);
+      }
+    }
 
     const wantsParse = url.pathname === '/extract';
     if (url.pathname !== '/metadata' && !wantsParse) {

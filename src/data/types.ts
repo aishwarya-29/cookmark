@@ -120,6 +120,23 @@ export interface Recipe {
   /** Unparsed caption, kept verbatim. Tier 3 keeps this even when parsing fails. */
   rawCaption?: string;
 
+  /** Spoken transcript, kept verbatim so the user can check it (FR-2.4). */
+  rawTranscript?: string;
+
+  /**
+   * True when the recipe was reconstructed from a speech transcript rather
+   * than read from written text. Transcripts are frequently mis-heard, so the
+   * model is allowed to infer — which means the result is a DRAFT to check
+   * against the reel, and the UI must say so.
+   */
+  unverified?: boolean;
+
+  /** How much the model trusted its own reconstruction. */
+  confidence?: 'high' | 'medium' | 'low';
+
+  /** What the model inferred rather than heard, for the user to verify. */
+  assumptions?: string[];
+
   // --- Translation (FR-2.5) ---
   /** BCP-47-ish code of the detected source language, when translated. */
   sourceLanguage?: string;

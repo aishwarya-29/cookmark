@@ -908,6 +908,47 @@ button.chip:hover {
   white-space: nowrap;
 }
 
+/* --- Draft banner: a transcript-derived recipe is a guess to check ---
+ * Deliberately NOT red. This is a useful draft, not an error - the same
+ * principle that keeps link-only saves neutral.
+ */
+
+.draft-banner {
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-quiet);
+}
+.draft-head {
+  margin: 0 0 4px;
+  font-size: var(--step-0);
+  font-weight: 620;
+  color: var(--accent);
+}
+.draft-banner p {
+  margin: 0 0 4px;
+}
+.draft-assumptions {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: var(--step--1);
+  color: var(--text-dim);
+}
+.draft-assumptions li {
+  margin-bottom: 3px;
+}
+.draft-banner .action-row {
+  margin-top: 12px;
+}
+
+.badge.draft {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  border-style: dashed;
+  background: transparent;
+}
+
 /* --- Settings --- */
 
 .settings-note {
