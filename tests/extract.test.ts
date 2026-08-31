@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import 'fake-indexeddb/auto';
 import { ReelRecipesDb } from '../src/data/db';
 import { saveReelUrl } from '../src/data/recipes';
-import { extractRecipe, processQueue } from '../src/lib/extract';
+import { extractRecipe, processQueue, reExtract } from '../src/lib/extract';
 
 /**
  * Tier 3 is the floor the whole product stands on. These tests exist to prove
@@ -121,6 +121,50 @@ describe('never destroys user data (FR-2.10)', () => {
     const row = await db.recipes.get(r.id);
     expect(row!.extractionState).toBe('settled');
     expect(row!.sourceUrl).toBeTruthy();
+  });
+});
+
+describe('re-extraction (FR-2.9)', () => {
+  it('settles the row again without losing the reel', async () => {
+    const r = await seed();
+    await extractRecipe(r.id, db);
+    await reExtract(r.id, db);
+
+    const row = await db.recipes.get(r.id);
+    expect(row!.sourceUrl).toBe('https://www.instagram.com/reel/Cx1y2Z3aBcD/');
+    expect(row!.extractionState).toBe('settled');
+  });
+
+  it('records a second attempt rather than replacing the first', async () => {
+    const r = await seed();
+    await extractRecipe(r.id, db);
+    const first = (await db.recipes.get(r.id))!.attempts.length;
+
+    await reExtract(r.id, db);
+
+    const row = await db.recipes.get(r.id);
+    expect(row!.attempts.length).toBeGreaterThan(first);
+  });
+
+  it('never overwrites a hand-edited field', async () => {
+    const r = await seed();
+    await db.recipes.update(r.id, {
+      title: 'Nan’s chilli oil',
+      notes: 'Used half the chilli',
+      manuallyEditedFields: ['title', 'notes'],
+    });
+
+    await reExtract(r.id, db);
+
+    const row = await db.recipes.get(r.id);
+    expect(row!.title).toBe('Nan’s chilli oil');
+    expect(row!.notes).toBe('Used half the chilli');
+  });
+
+  it('does nothing for a deleted recipe', async () => {
+    const r = await seed();
+    await db.recipes.delete(r.id);
+    await expect(reExtract(r.id, db)).resolves.toBeUndefined();
   });
 });
 

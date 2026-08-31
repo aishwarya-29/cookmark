@@ -55,9 +55,10 @@ function chip(label: string, attr: string, active: boolean, count?: number): str
 }
 
 export function searchPanelHtml(recipes: Recipe[], s: SearchState): string {
-  // Nothing to search on first run — the empty state should teach the paste
-  // flow in one glance (PRD §11 Q5), not present tools with no purpose yet.
-  if (recipes.length < 2) return '';
+  // Hidden ONLY when the library is genuinely empty, so first run teaches the
+  // paste flow (PRD §11 Q5). Hiding it at one recipe was wrong: the controls
+  // disappearing after a first save reads as broken, not tidy.
+  if (recipes.length === 0) return '';
 
   const cuisines = distinctValues(recipes, 'cuisine');
   const meals = distinctValues(recipes, 'mealType');

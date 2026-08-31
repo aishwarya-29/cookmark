@@ -428,3 +428,24 @@ export async function processQueue(
     onProgress?.();
   }
 }
+
+/**
+ * Re-run extraction on an already-saved recipe — PRD FR-2.9.
+ *
+ * Needed for entries saved during an outage, entries saved before a parser
+ * improvement, and link-only entries worth retrying. Manual edits are
+ * protected: runTier1 and runTier3 both skip any field listed in
+ * manuallyEditedFields, so this can never destroy the user's own work.
+ */
+export async function reExtract(
+  recipeId: string,
+  db: ReelRecipesDb = defaultDb,
+  onProgress?: () => void,
+): Promise<void> {
+  const recipe = await db.recipes.get(recipeId);
+  if (!recipe) return;
+
+  await updateRecipe(recipeId, { extractionState: 'queued', activeTier: undefined }, db);
+  onProgress?.();
+  await extractRecipe(recipeId, db, onProgress);
+}

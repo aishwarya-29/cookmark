@@ -725,6 +725,26 @@ button.chip:hover {
   min-height: auto;
 }
 
+.suggest-hint {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: var(--step--1);
+  font-weight: 560;
+  color: var(--accent);
+  text-decoration: none;
+}
+.suggest-hint:hover {
+  text-decoration: underline;
+}
+
+.chip.accept-all {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+  border-style: solid;
+  font-weight: 600;
+}
+
 .suggestions {
   margin: 12px 0 4px;
   padding: 12px 14px;

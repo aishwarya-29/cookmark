@@ -3,6 +3,7 @@ import { formatIngredient } from '../lib/quantity';
 import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes';
 import { escapeHtml, formatDate, onClick } from './dom';
 import { navigate } from './router';
+import { reExtract } from '../lib/extract';
 import { suggestionsHtml, categoriesHtml, bindCategoryActions } from './categorise';
 
 /**
@@ -138,6 +139,7 @@ export function renderRecipe(
       placeholder="Used half the chilli. Needs 10 more minutes.">${escapeHtml(r.notes ?? '')}</textarea>
 
     <div class="action-row">
+      <button class="subtle" data-action="re-extract">Try extracting again</button>
       <button class="subtle danger" data-action="delete">Delete recipe</button>
     </div>
 
@@ -160,6 +162,25 @@ export function renderRecipe(
 
   onClick(root, '[data-action="cook"]', () => navigate(`#/cook/${r.id}`));
   onClick(root, '[data-action="edit"]', () => navigate(`#/edit/${r.id}`));
+  onClick(root, '[data-action="re-extract"]', async (el) => {
+    // Re-extraction never destroys manual edits (FR-2.9) — every write below
+    // skips fields listed in manuallyEditedFields — so no confirmation is
+    // needed unless the user has hand-edited something.
+    const edited = (r.manuallyEditedFields ?? []).filter((f) => f !== 'notes');
+    if (edited.length) {
+      const ok = confirm(
+        `You've edited this recipe by hand. Re-extracting will leave your edits to ${edited.join(
+          ', ',
+        )} alone, but may change other fields. Continue?`,
+      );
+      if (!ok) return;
+    }
+    el.textContent = 'Extracting…';
+    (el as HTMLButtonElement).disabled = true;
+    await reExtract(r.id, undefined, onChange);
+    onChange();
+  });
+
   onClick(root, '[data-action="delete"]', async () => {
     if (!confirm('Delete this recipe? This cannot be undone.')) return;
     await deleteRecipe(r.id);

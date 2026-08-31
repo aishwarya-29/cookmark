@@ -53,6 +53,9 @@ export function suggestionsHtml(r: Recipe): string {
       <p class="dim small">Suggested — tap to keep, or dismiss them all.</p>
       <div class="chip-row">
         ${chips.join('')}
+      </div>
+      <div class="chip-row">
+        <button class="chip accept-all" data-accept-all="1">Keep all</button>
         <button class="chip dismiss" data-dismiss-all="1">Dismiss</button>
       </div>
     </div>`;
@@ -127,6 +130,18 @@ export function bindCategoryActions(
         suggested: rest,
       });
     }
+  });
+
+  onClick(root, '[data-accept-all]', () => {
+    // Tapping five chips per recipe is friction; one tap for "these are all
+    // right" is the common case.
+    const s = r.suggested ?? {};
+    void save({
+      ...(s.cuisine ? { cuisine: s.cuisine } : {}),
+      ...(s.mealType ? { mealType: s.mealType } : {}),
+      ...(s.tags?.length ? { tags: [...new Set([...(r.tags ?? []), ...s.tags])] } : {}),
+      suggested: {},
+    });
   });
 
   onClick(root, '[data-dismiss-all]', () => {

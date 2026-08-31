@@ -59,6 +59,13 @@ export function statusBadge(r: Recipe): string {
   }
 }
 
+/** How many category suggestions are awaiting the user's decision (FR-3.7). */
+function suggestionCount(r: Recipe): number {
+  const s = r.suggested;
+  if (!s) return 0;
+  return (s.cuisine ? 1 : 0) + (s.mealType ? 1 : 0) + (s.tags?.length ?? 0);
+}
+
 function cardHtml(r: Recipe): string {
   // Attribution is permanent and always visible (NFR-4.2), including here.
   const attribution = isManual(r)
@@ -117,6 +124,17 @@ function cardHtml(r: Recipe): string {
                  .map((t) => `<span class="chip small-chip">${escapeHtml(t)}</span>`)
                  .join('')}
              </div>`
+          : ''
+      }
+      ${
+        // Suggestions are useless if the user never learns they exist. Say so
+        // here rather than leaving them to be discovered on the detail screen.
+        suggestionCount(r) > 0
+          ? `<a class="suggest-hint" href="#/recipe/${r.id}">
+               ${suggestionCount(r)} suggested ${
+                 suggestionCount(r) === 1 ? 'label' : 'labels'
+               } — tap to review
+             </a>`
           : ''
       }
       ${
