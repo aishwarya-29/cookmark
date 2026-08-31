@@ -54,13 +54,19 @@ let collections: Collection[] = [];
 /** Recipe id whose "add to collection" picker is open, if any. */
 let pickerFor: string | null = null;
 
-function libraryShellHtml(collection?: Collection): string {
+function libraryShellHtml(collection?: Collection, unfiled = false): string {
   const noticeHtml = notice
     ? `<div class="notice ${notice.tone}">${escapeHtml(notice.text)}</div>`
     : '';
 
-  // Inside a collection, search and filters apply to that collection only.
-  const scope = collection ? recipesIn(collection, recipes) : recipes;
+  // Inside a collection — or the unfiled view — search and filters apply to
+  // that subset only.
+  const filed = new Set(collections.flatMap((c) => c.recipeIds));
+  const scope = collection
+    ? recipesIn(collection, recipes)
+    : unfiled
+      ? recipes.filter((r) => !filed.has(r.id))
+      : recipes;
 
   // Ingredient match replaces the normal list when active — a different
   // question deserves a different answer shape.
@@ -89,10 +95,16 @@ function libraryShellHtml(collection?: Collection): string {
       }
     </div>
     ${
-      collection && !scope.length
+      !scope.length && (collection || unfiled)
         ? `<div class="empty">
-             <p><strong>Nothing in here yet</strong></p>
-             <p class="dim">Open a recipe and use “add to a collection”.</p>
+             <p><strong>${
+               unfiled ? 'Everything is filed' : 'Nothing in here yet'
+             }</strong></p>
+             <p class="dim">${
+               unfiled
+                 ? 'Every recipe belongs to at least one collection.'
+                 : 'Open a recipe and use “add to a collection”.'
+             }</p>
            </div>`
         : listHtml
     }
@@ -195,8 +207,11 @@ async function render(): Promise<void> {
         : null;
     });
 
-    renderChrome(route, collection ? collection.name : 'All recipes');
-    app.innerHTML = libraryShellHtml(collection);
+    renderChrome(
+      route,
+      collection ? collection.name : route.unfiled ? 'Not in a collection' : 'All recipes',
+    );
+    app.innerHTML = libraryShellHtml(collection, route.unfiled ?? false);
     document.body.classList.toggle('sheet-open', sheetOpen);
 
     for (const p of preserved) {

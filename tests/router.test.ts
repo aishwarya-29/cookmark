@@ -19,6 +19,12 @@ describe('parseRoute', () => {
     });
   });
 
+  it('routes #/unfiled to the recipes in no collection', () => {
+    // Regression: this tile pointed at #/all, so "Not in a collection" showed
+    // every recipe in the library.
+    expect(parseRoute('#/unfiled')).toEqual({ name: 'library', unfiled: true });
+  });
+
   it('parses recipe, cook, and edit routes', () => {
     expect(parseRoute('#/recipe/abc-123')).toEqual({ name: 'recipe', id: 'abc-123' });
     expect(parseRoute('#/cook/abc-123')).toEqual({ name: 'cook', id: 'abc-123' });

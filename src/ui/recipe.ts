@@ -92,9 +92,9 @@ function emptyRecipeInvitation(): string {
     <div class="invitation">
       <p>No recipe details yet.</p>
       <p class="dim">
-        Add them whenever you like — or open the reel and jot down what you see.
+        Add them whenever you like — or watch the reel and jot down what you see.
+        The button below is always there.
       </p>
-      <button data-action="edit">Add recipe details</button>
     </div>`;
 }
 
@@ -190,19 +190,26 @@ export function renderRecipe(
       <button class="subtle danger" data-action="delete">Delete recipe</button>
     </div>
 
-    ${
-      hasContent
-        ? `<div class="sticky-actions">
-             <button class="subtle" data-action="edit">Edit</button>
-             <button class="primary-cta" data-action="cook">
+    <!--
+      The sticky bar is always present. Editing used to be rendered only when
+      the recipe had content, so a link-only entry — the one that most needs
+      editing — had no way to reach it at all.
+    -->
+    <div class="sticky-actions">
+      <button class="${hasContent ? 'subtle' : 'primary-cta'}" data-action="edit">
+        ${hasContent ? 'Edit' : 'Add recipe details'}
+      </button>
+      ${
+        hasContent
+          ? `<button class="primary-cta" data-action="cook">
                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                  <path d="M5 3l14 9-14 9V3z" fill="currentColor"/>
                </svg>
                Start cooking
-             </button>
-           </div>`
-        : ''
-    }
+             </button>`
+          : ''
+      }
+    </div>
   `;
 
   bindCategoryActions(root, r, knownTags, onChange);

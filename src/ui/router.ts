@@ -9,8 +9,11 @@
 export type Route =
   /** Home: the grid of collection folders. */
   | { name: 'home' }
-  /** All recipes, or the contents of one collection. */
-  | { name: 'library'; collectionId?: string }
+  /**
+   * All recipes, the contents of one collection, or the recipes that are in
+   * no collection at all.
+   */
+  | { name: 'library'; collectionId?: string; unfiled?: boolean }
   | { name: 'recipe'; id: string }
   | { name: 'cook'; id: string }
   | { name: 'edit'; id: string }
@@ -25,6 +28,7 @@ export function parseRoute(hash: string): Route {
   if (head === 'edit' && id) return { name: 'edit', id };
   if (head === 'settings') return { name: 'settings' };
   if (head === 'all') return { name: 'library' };
+  if (head === 'unfiled') return { name: 'library', unfiled: true };
   if (head === 'collection' && id) return { name: 'library', collectionId: id };
   return { name: 'home' };
 }

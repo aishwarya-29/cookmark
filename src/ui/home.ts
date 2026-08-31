@@ -87,7 +87,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
   if (collections.length && unfiled.length) {
     tiles.push(
       folderTile({
-        href: '#/all',
+        href: '#/unfiled',
         name: 'Not in a collection',
         count: unfiled.length,
         cover: unfiled.find((r) => r.thumbnailUrl)?.thumbnailUrl,
