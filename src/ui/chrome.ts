@@ -17,12 +17,16 @@ export function headerHtml(title: string, opts: { back?: string; compact?: boole
     <header class="topbar ${opts.compact ? 'compact' : ''}">
       ${
         opts.back
-          ? `<a class="topbar-back" href="${escapeHtml(opts.back)}" aria-label="Back">
+          // A button using real browser history, not a link to a fixed
+          // destination: an href both pushes a new entry AND ignores where the
+          // user actually came from (a recipe opened from a collection should
+          // return to that collection, not to home).
+          ? `<button class="topbar-back" data-action="go-back" aria-label="Back">
                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                  <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2"
                        stroke-linecap="round" stroke-linejoin="round"/>
                </svg>
-             </a>`
+             </button>`
           : ''
       }
       <span class="topbar-title">${escapeHtml(title)}</span>

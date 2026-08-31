@@ -2,7 +2,7 @@ import type { Recipe } from '../data/types';
 import { formatIngredient } from '../lib/quantity';
 import { updateRecipe } from '../data/recipes';
 import { escapeHtml, onClick } from './dom';
-import { navigate } from './router';
+import { navigateReplacing } from './router';
 import { requestWakeLock, releaseWakeLock, wakeLockStatus } from '../lib/wakelock';
 
 /**
@@ -97,7 +97,8 @@ export function renderCook(root: HTMLElement, r: Recipe, onChange: () => void): 
   };
 
   onClick(root, '[data-action="exit"]', () => {
-    void exitCookMode().then(() => navigate(`#/recipe/${r.id}`));
+    // Finishing a cook returns to the recipe; Back should not re-enter it.
+    void exitCookMode().then(() => navigateReplacing(`#/recipe/${r.id}`));
   });
 
   onClick(root, '[data-ing]', (el) => {

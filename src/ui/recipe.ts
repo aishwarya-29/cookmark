@@ -2,7 +2,7 @@ import type { Recipe, Ingredient, Collection } from '../data/types';
 import { formatIngredient } from '../lib/quantity';
 import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes';
 import { escapeHtml, formatDate, onClick } from './dom';
-import { navigate } from './router';
+import { navigate, navigateReplacing } from './router';
 import { reExtract } from '../lib/extract';
 import { suggestionsHtml, categoriesHtml, bindCategoryActions, collectionsRowHtml } from './categorise';
 
@@ -252,7 +252,7 @@ export function renderRecipe(
   onClick(root, '[data-action="delete"]', async () => {
     if (!confirm('Delete this recipe? This cannot be undone.')) return;
     await deleteRecipe(r.id);
-    navigate('#/');
+    navigateReplacing('#/');
   });
 
   // Notes are the user's own content and must never be lost (FR-4.6).
@@ -269,7 +269,9 @@ export function renderRecipe(
 
 export function renderEdit(root: HTMLElement, r: Recipe, onChange: () => void): void {
   root.innerHTML = `
-    <p><a href="#/recipe/${r.id}" class="back">← Cancel</a></p>
+    <!-- A button, not a link: an href pushes history, so Back after
+         cancelling would land back in the editor. -->
+    <p><button class="linklike back" data-action="cancel-edit">← Cancel</button></p>
     <h1>Edit recipe</h1>
 
     <label for="e-title">Title</label>
@@ -289,6 +291,8 @@ export function renderEdit(root: HTMLElement, r: Recipe, onChange: () => void): 
       <button data-action="save">Save changes</button>
     </div>
   `;
+
+  onClick(root, '[data-action="cancel-edit"]', () => navigateReplacing(`#/recipe/${r.id}`));
 
   onClick(root, '[data-action="save"]', async () => {
     const title = root.querySelector<HTMLInputElement>('#e-title')!.value.trim();
@@ -312,7 +316,7 @@ export function renderEdit(root: HTMLElement, r: Recipe, onChange: () => void): 
       manuallyEditedFields: [...edited],
     });
     onChange();
-    navigate(`#/recipe/${r.id}`);
+    navigateReplacing(`#/recipe/${r.id}`);
   });
 }
 

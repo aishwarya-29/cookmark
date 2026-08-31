@@ -7,7 +7,7 @@ import {
   markManualPasteDone,
   markClipboardDeclined,
 } from './lib/clipboard';
-import { currentRoute, onRouteChange, navigate } from './ui/router';
+import { currentRoute, onRouteChange, navigate, navigateReplacing, goBack } from './ui/router';
 import { libraryHtml } from './ui/library';
 import { renderRecipe, renderEdit } from './ui/recipe';
 import { renderCook, enterCookMode, exitCookMode } from './ui/cook';
@@ -132,6 +132,12 @@ function renderChrome(route: ReturnType<typeof currentRoute>, title: string): vo
       ? tabBarHtml(route.name === 'settings' ? 'settings' : 'library')
       : '';
   sheetRoot.innerHTML = browsing ? pasteSheetHtml(sheetOpen, clipboardOffer) : '';
+
+  onClick(chromeTop, '[data-action="go-back"]', () => {
+    // Real history, so a recipe opened from a collection returns there rather
+    // than jumping to home. goBack falls back to home at the start of history.
+    goBack('#/');
+  });
 
   onClick(chromeBottom, '[data-tab="add"]', () => {
     sheetOpen = true;
@@ -345,7 +351,7 @@ async function collectionMenu(c: Collection): Promise<void> {
     if (!ok) return;
     await deleteCollection(c.id);
     await refresh();
-    navigate('#/');
+    navigateReplacing('#/');
     return;
   }
 
