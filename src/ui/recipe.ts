@@ -122,6 +122,7 @@ export function renderRecipe(
   const hero = r.thumbnailUrl
     ? `<div class="hero">
          <img src="${escapeHtml(r.thumbnailUrl)}" alt="" referrerpolicy="no-referrer"
+              data-thumb-for="${r.id}"
               onerror="this.closest('.hero').classList.add('broken')" />
          <div class="hero-fade"></div>
        </div>

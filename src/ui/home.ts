@@ -17,6 +17,7 @@ function folderTile(opts: {
   name: string;
   count: number;
   cover?: string;
+  coverRecipeId?: string;
   pinned?: boolean;
 }): string {
   const label = `${opts.count} ${opts.count === 1 ? 'recipe' : 'recipes'}`;
@@ -27,6 +28,7 @@ function folderTile(opts: {
         ${
           opts.cover
             ? `<img src="${escapeHtml(opts.cover)}" alt="" loading="lazy"
+                    ${opts.coverRecipeId ? `data-thumb-for="${opts.coverRecipeId}"` : ''}
                     referrerpolicy="no-referrer"
                     onerror="this.closest('.folder-cover').classList.add('no-image')" />`
             : ''
@@ -71,6 +73,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
       name: 'All recipes',
       count: recipes.length,
       cover: recipes.find((r) => r.thumbnailUrl)?.thumbnailUrl,
+      coverRecipeId: recipes.find((r) => r.thumbnailUrl)?.id,
       pinned: true,
     }),
     ...collections.map((c) =>
@@ -79,6 +82,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
         name: c.name,
         count: recipesIn(c, recipes).length,
         cover: coverFor(c, recipes),
+        coverRecipeId: [...recipesIn(c, recipes)].reverse().find((r) => r.thumbnailUrl)?.id,
       }),
     ),
   ];
@@ -91,6 +95,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
         name: 'Not in a collection',
         count: unfiled.length,
         cover: unfiled.find((r) => r.thumbnailUrl)?.thumbnailUrl,
+        coverRecipeId: unfiled.find((r) => r.thumbnailUrl)?.id,
       }),
     );
   }

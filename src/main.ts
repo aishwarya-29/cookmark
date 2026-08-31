@@ -17,6 +17,7 @@ import {
   isSearchActive, emptySearch, type SearchState,
 } from './ui/search-ui';
 import { allTags } from './lib/search';
+import { hydrateThumbnails, backfillThumbnails, preloadThumbnails } from './lib/thumbnail';
 import { homeHtml } from './ui/home';
 import {
   listCollections, createCollection, toggleInCollection, deleteCollection,
@@ -170,6 +171,14 @@ function renderChrome(route: ReturnType<typeof currentRoute>, title: string): vo
 }
 
 async function render(): Promise<void> {
+  await renderRoute();
+  // Swap remote thumbnail URLs for cached bytes. Instagram's URLs expire in
+  // about four days, so the cached copy is often the only one that still
+  // works — and the only one that works offline at all.
+  hydrateThumbnails(document);
+}
+
+async function renderRoute(): Promise<void> {
   const route = currentRoute();
 
   // Leaving cook mode by any path — back button included — must release the
@@ -516,8 +525,10 @@ async function handleShareTarget(): Promise<void> {
 
 registerServiceWorker();
 
-void refresh().then(async () => {
+void preloadThumbnails().then(() => refresh()).then(async () => {
   await handleShareTarget();
   await processQueue(undefined, () => void refresh());
   await refresh();
+  // Repair libraries saved before caching existed, and retry any that failed.
+  if (await backfillThumbnails()) await refresh();
 });

@@ -87,6 +87,7 @@ function cardHtml(r: Recipe): string {
   const thumb = r.thumbnailUrl
     ? `<a class="card-thumb" href="#/recipe/${r.id}" tabindex="-1" aria-hidden="true">
          <img src="${escapeHtml(r.thumbnailUrl)}" alt="" loading="lazy"
+              data-thumb-for="${r.id}"
               referrerpolicy="no-referrer"
               onerror="this.closest('.card-thumb').remove()" />
        </a>`

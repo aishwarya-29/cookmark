@@ -5,6 +5,7 @@ import { canonicaliseInstagramUrl, type CanonicalUrl } from '../lib/url';
 import { recipeSearchTerms } from '../lib/ingredient-terms';
 import { newId } from '../lib/id';
 import { purgeRecipe } from './collections';
+import { releaseThumbnail } from '../lib/thumbnail';
 
 /**
  * The save path — PRD NFR-3.1, the product's fundamental promise.
@@ -129,6 +130,8 @@ export async function deleteRecipe(id: string, db: ReelRecipesDb = defaultDb): P
   // Drop it from any collection too, so folders never count or cover-image a
   // recipe that no longer exists.
   await purgeRecipe(id, db);
+  // Free the cached thumbnail's object URL along with it.
+  releaseThumbnail(id);
 }
 
 /**

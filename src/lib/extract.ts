@@ -4,6 +4,7 @@ import type { Recipe, ExtractionAttempt, Ingredient } from '../data/types';
 import { updateRecipe } from '../data/recipes';
 import { getTierConfig, WORKER_URL } from './config';
 import { parseCaption } from './parse-caption';
+import { cacheThumbnail } from './thumbnail';
 
 /**
  * The extraction cascade — PRD §04.
@@ -112,6 +113,11 @@ async function runTier3(recipe: Recipe, db: ReelRecipesDb): Promise<void> {
   }
 
   await updateRecipe(recipe.id, patch, db);
+
+  // Copy the bytes locally: Instagram's URLs expire in about four days, and a
+  // cached URL is no use offline either. Deliberately not awaited-for-failure
+  // — a missing image must never affect the saved reel.
+  if (patch.thumbnailUrl) void cacheThumbnail(recipe.id, patch.thumbnailUrl, db);
 }
 
 export interface ExtractResponse {
@@ -419,6 +425,9 @@ export async function extractRecipe(
           { ...r1.patch, attempts: [...recipe.attempts, r1.attempt] },
           db,
         );
+        if (r1.patch.thumbnailUrl) {
+          void cacheThumbnail(recipeId, r1.patch.thumbnailUrl, db);
+        }
         // PARTIAL stops here by design (FR-2.3): ingredients without a method
         // must be saved and flagged, NOT passed down to audio.
         return;
