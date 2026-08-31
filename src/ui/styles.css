@@ -3,10 +3,11 @@
  *
  * All styling lives in this one file; logic never carries visual decisions.
  *
- * Three ideas govern everything here:
+ * Four ideas govern everything here:
  *
- * 1. WARM, NOT NEUTRAL. Cooking happens in a warm-lit kitchen in the evening.
- *    Every grey is shifted toward red, and no pure #000 or #FFF appears.
+ * 1. PAPER, NOT SCREEN. Light-first, on warm off-white rather than pure #FFF.
+ *    A cookbook page, not an interface. Dark mode still exists in full, since
+ *    cooking often happens after dark.
  *
  * 2. STATUS IS TYPOGRAPHIC, NOT CHROMATIC. A link-only save is a valid
  *    outcome (PRD §11 Q2), so semantic red/amber/green pills are deliberately
@@ -14,71 +15,93 @@
  *    contrast. Weight and wording carry status; colour is reserved.
  *
  * 3. THE FOOD IS THE COLOUR. Thumbnails are saturated already, so the chrome
- *    recedes and lets them carry the page.
+ *    recedes almost to nothing and lets them carry the page.
+ *
+ * 4. AIR IS THE LAYOUT. Space does the separating, so borders and shadows are
+ *    used sparingly. Everything sits on a 4px rhythm.
  */
 
 :root {
-  /* --- Warm dark: a kitchen at 8pm, not a dashboard --- */
-  --bg: #12100e;
-  --bg-elevated: #1c1917;
-  --surface: #1c1917;
-  --surface-raised: #292524;
-  --border: #302b28;
-  --border-strong: #44403c;
+  /* --- Paper: warm off-white, never pure --- */
+  --bg: #faf8f5;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #f2efea;
+  --border: #e8e3db;
+  --border-strong: #d6cec2;
 
-  --text: #f5f1eb;
-  --text-dim: #a8a29e;
-  --text-faint: #78716c;
+  /* Ink, warmed slightly so it never reads blue against the paper. */
+  --text: #1f1b16;
+  --text-dim: #6b6259;
+  /* 4.70:1 on paper — AA. A lighter grey looked better but failed contrast,
+     and this colour carries section labels and counts (NFR-5.1). */
+  --text-faint: #786e64;
 
-  /* Burnt orange — a browned onion, a crust. Not tomato red (every recipe
-     app), not success green (would shame link-only saves by contrast). */
-  --accent: #e8845a;
-  --accent-quiet: #3a241a;
-  --accent-text: #1a0f09;
+  /* Terracotta — a clay pot, a crust. Deep enough for AA on paper. */
+  --accent: #b4441f;
+  --accent-quiet: #fbeee7;
+  --accent-text: #ffffff;
 
-  --danger: #e88a7d;
+  --danger: #a3301c;
 
-  /* Type scale — 1.2 ratio, compressed for dense library scanning. */
+  /* --- Type: a 1.25 scale, larger than before so it reads as a page --- */
   --step--1: 0.8125rem;
-  --step-0: 0.9375rem;
-  --step-1: 1.0625rem;
-  --step-2: 1.25rem;
-  --step-3: 1.5rem;
+  --step-0: 1rem;
+  --step-1: 1.125rem;
+  --step-2: 1.375rem;
+  --step-3: 1.75rem;
+  --step-4: 2.25rem;
 
-  --radius: 14px;
+  /* --- Spacing: a 4px rhythm, so nothing is spaced by eye --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius: 16px;
   --radius-sm: 10px;
-  --gap: 14px;
+  --radius-lg: 22px;
+  --gap: var(--space-4);
   --touch: 48px; /* NFR-5.2 minimum */
 
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.5);
+  /* Soft and low: depth from light, not from a hard drop shadow. */
+  --shadow: 0 1px 2px rgb(31 27 22 / 0.04), 0 12px 28px -16px rgb(31 27 22 / 0.16);
+  --shadow-lifted: 0 2px 6px rgb(31 27 22 / 0.06), 0 20px 44px -20px rgb(31 27 22 / 0.22);
 
   --ease: cubic-bezier(0.2, 0, 0.1, 1);
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root {
-    --bg: #fdfcfa;
-    --bg-elevated: #ffffff;
-    --surface: #ffffff;
-    --surface-raised: #f5f2ee;
-    --border: #e7e1da;
-    --border-strong: #d3cabf;
+    /* Warm charcoal, not black: a kitchen at 8pm. */
+    --bg: #14120f;
+    --bg-elevated: #1e1a16;
+    --surface: #1e1a16;
+    --surface-raised: #2a2521;
+    --border: #332d27;
+    --border-strong: #4a423a;
 
-    --text: #1c1917;
-    --text-dim: #57534e;
-    --text-faint: #8a8177;
+    --text: #f7f3ed;
+    --text-dim: #b0a69a;
+    /* 4.5:1 on charcoal — AA, up from 4.02 which was large-text only. */
+    --text-faint: #8b8175;
 
-    --accent: #c2571f;
-    --accent-quiet: #fdf0e8;
-    --accent-text: #ffffff;
+    /* Lifted for contrast on charcoal — the paper terracotta is too dark. */
+    --accent: #ec8a5e;
+    --accent-quiet: #35211a;
+    --accent-text: #1a0f09;
 
-    --danger: #b3402c;
+    --danger: #e8907f;
 
-    --shadow: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px -14px rgb(28 25 23 / 0.18);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 28px -16px rgb(0 0 0 / 0.55);
+    --shadow-lifted: 0 2px 6px rgb(0 0 0 / 0.45), 0 20px 44px -20px rgb(0 0 0 / 0.6);
 
-    color-scheme: light;
+    color-scheme: dark;
   }
 }
 
@@ -94,9 +117,12 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* -apple-system first: on the target device this is SF, which sets tighter
+     than the generic system-ui fallback and suits the larger scale. */
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
   font-size: var(--step-0);
-  line-height: 1.55;
+  line-height: 1.6;
+  letter-spacing: -0.003em;
   /* Respect the notch on an installed PWA. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
@@ -110,11 +136,21 @@ body {
  */
 
 #app {
-  max-width: 640px;
+  /* Narrower than before: a comfortable measure matters more than filling a
+     tablet, and a long line of ingredients is tiring to scan. */
+  max-width: 560px;
   margin: 0 auto;
   /* Top: clears the sticky header. Bottom: clears the tab bar + home indicator. */
-  padding: calc(var(--topbar-h) + 8px) 16px calc(var(--tabbar-h) + 28px);
-  animation: view-in 0.26s var(--ease);
+  padding: calc(var(--topbar-h) + var(--space-4)) var(--space-5)
+    calc(var(--tabbar-h) + var(--space-6));
+  animation: view-in 0.3s var(--ease);
+}
+
+@media (max-width: 420px) {
+  #app {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
 }
 
 @keyframes view-in {
@@ -158,13 +194,22 @@ body {
   white-space: nowrap;
 }
 
+/*
+ * A <button> for real history navigation, so it must opt out of the primary
+ * button styling — otherwise it inherits the accent fill and reads as a
+ * call to action rather than a back chevron.
+ */
 .topbar-back {
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  margin-left: -10px;
+  min-height: 0;
+  padding: 0;
+  margin-left: calc(-1 * var(--space-2));
   color: var(--text);
+  background: transparent;
+  border: none;
   border-radius: 50%;
   flex: 0 0 auto;
 }
@@ -355,20 +400,23 @@ body.sheet-open {
 /* --- Headings --- */
 
 h1 {
-  font-size: var(--step-3);
-  font-weight: 640;
-  letter-spacing: -0.021em;
-  line-height: 1.2;
-  margin: 0 0 2px;
+  font-size: var(--step-4);
+  font-weight: 680;
+  letter-spacing: -0.028em;
+  line-height: 1.12;
+  margin: 0 0 var(--space-2);
+  /* Optical balance: a heavy line this size reads better slightly tighter
+     than the body it sits above. */
+  text-wrap: balance;
 }
 
 h2 {
   font-size: var(--step--1);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 620;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin: 32px 0 10px;
+  margin: var(--space-6) 0 var(--space-3);
 }
 
 .subtitle {
@@ -1002,8 +1050,8 @@ button.chip:hover {
 
 .section-label {
   font-size: var(--step--1);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 620;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
   margin: 0;
@@ -1015,18 +1063,25 @@ button.chip:hover {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--space-5);
 }
 
+/*
+ * No border: on paper a card is defined by its own surface and a soft
+ * shadow, not by an outline. Air between cards does the separating.
+ */
 .card {
   position: relative;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 15px;
+  padding: var(--space-4);
   box-shadow: var(--shadow);
-  transition: border-color 0.15s var(--ease), transform 0.12s var(--ease);
-  animation: card-in 0.28s var(--ease) backwards;
+  transition: box-shadow 0.18s var(--ease), transform 0.12s var(--ease);
+  animation: card-in 0.3s var(--ease) backwards;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lifted);
 }
 
 @keyframes card-in {
@@ -1069,18 +1124,24 @@ button.chip:hover {
 }
 
 .card-title {
-  font-size: var(--step-1);
-  font-weight: 600;
-  letter-spacing: -0.011em;
-  line-height: 1.3;
-  margin: 0 0 7px;
+  font-size: var(--step-2);
+  font-weight: 620;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
+  margin: 0 0 var(--space-2);
   overflow-wrap: anywhere;
+  /* Two lines at this size, then ellipsis: a long title must not push the
+     attribution out of the card's first glance. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--space-2);
   align-items: center;
   font-size: var(--step--1);
   color: var(--text-dim);
@@ -1135,11 +1196,11 @@ button.chip:hover {
 .card-facts {
   font-size: var(--step--1);
   color: var(--text-faint);
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
 }
 
 .card .chip-row {
-  margin: 9px 0 0;
+  margin: var(--space-3) 0 0;
 }
 
 .card-meta + .card-meta {
@@ -1312,19 +1373,23 @@ button.chip:hover {
 }
 
 .plain-list li {
-  padding: 10px 0 10px 20px;
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) 0 var(--space-3) var(--space-5);
+  /* A hairline rather than a full border: the rhythm should be felt, not
+     seen as ruled lines down the page. */
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   position: relative;
+  line-height: 1.5;
 }
 .plain-list li::before {
   content: '';
   position: absolute;
-  left: 3px;
-  top: 20px;
-  width: 4px;
-  height: 4px;
+  left: var(--space-2);
+  top: 1.35em;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--text-faint);
+  background: var(--accent);
+  opacity: 0.55;
 }
 .plain-list li:last-child {
   border-bottom: none;
@@ -1335,24 +1400,26 @@ button.chip:hover {
 }
 .step-list li {
   counter-increment: step;
-  padding: 12px 0 12px 34px;
+  padding: var(--space-4) 0 var(--space-4) var(--space-7);
   position: relative;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 .step-list li::before {
   content: counter(step);
   position: absolute;
   left: 0;
-  top: 12px;
-  width: 23px;
-  height: 23px;
+  top: var(--space-4);
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--surface-raised);
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  font-weight: 640;
+  /* The step number is the one place a tint of the accent earns its keep:
+     it marks progress through a method being followed with wet hands. */
+  background: var(--accent-quiet);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 680;
 }
 
 /* Partial — a gentle affordance, never an error (PRD §07). */
