@@ -29,6 +29,10 @@ interface ExtractResponse {
   steps?: string[];
   sourceLanguage?: string;
   translated?: boolean;
+  /** Category suggestions for the user to accept or dismiss (FR-3.7). */
+  cuisine?: string;
+  mealType?: string;
+  tags?: string[];
   /** Which route produced the metadata, for debugging (NFR-6.3). */
   route?: string;
   /** Set when parsing was skipped or failed, so the client can degrade. */
@@ -147,6 +151,9 @@ export default {
       if (parsed.title) body.title = parsed.title;
       if (parsed.sourceLanguage) body.sourceLanguage = parsed.sourceLanguage;
       if (parsed.translated) body.translated = parsed.translated;
+      if (parsed.cuisine) body.cuisine = parsed.cuisine;
+      if (parsed.mealType) body.mealType = parsed.mealType;
+      if (parsed.tags?.length) body.tags = parsed.tags;
     } catch (err) {
       // Quota exhaustion is not a failure — the client falls back to its own
       // regex parser and still gets a usable result (NFR-1.4).

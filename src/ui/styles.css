@@ -375,6 +375,121 @@ button.danger {
   margin: 4px 0 0;
 }
 
+/* --- Search, filters, and categories (FR-3.2, FR-3.3, FR-3.4, FR-3.6) --- */
+
+.search-panel {
+  margin: 16px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-panel input[type='search'],
+.search-panel input[type='text'] {
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.cook-with summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+.cook-with p {
+  margin: 4px 0 8px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 6px 10px;
+  min-height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+button.chip {
+  cursor: pointer;
+}
+
+.chip.filter.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Suggestions read as an offer, not an assertion (FR-3.7). */
+.chip.suggest {
+  border-style: dashed;
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: transparent;
+}
+
+.chip.dismiss,
+.chip.add {
+  color: var(--text-faint);
+  background: transparent;
+  border-style: dashed;
+}
+
+.chip-x {
+  min-height: auto;
+  padding: 0 2px;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-faint);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.small-chip {
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  min-height: auto;
+}
+
+.suggestions {
+  margin: 8px 0 4px;
+}
+.suggestions p {
+  margin: 0;
+}
+
+.match-line {
+  font-size: 0.875rem;
+  margin: 4px 0;
+  color: var(--text-dim);
+}
+.match-line strong {
+  color: var(--text);
+}
+
 /* --- Cook mode (FR-4.2, NFR-5.2) ---
  * Larger type for arm's-length reading, 48px+ targets everywhere, and no
  * interaction that depends on a swipe.

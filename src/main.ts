@@ -12,6 +12,11 @@ import { libraryHtml } from './ui/library';
 import { renderRecipe, renderEdit } from './ui/recipe';
 import { renderCook, enterCookMode, exitCookMode } from './ui/cook';
 import { escapeHtml, onClick } from './ui/dom';
+import {
+  searchPanelHtml, matchResultsHtml, applyFilters, ingredientMatches,
+  isSearchActive, emptySearch, type SearchState,
+} from './ui/search-ui';
+import { allTags } from './lib/search';
 
 /**
  * App shell: owns routing, the paste bar, and the single render entry point.
@@ -29,6 +34,8 @@ let saving = false;
 let clipboardOffer: string | null = null;
 /** True while cook mode holds the screen, so we can tear it down on route change. */
 let cooking = false;
+/** Current search / filter state (FR-3.2, FR-3.3, FR-3.4). */
+let search: SearchState = { ...emptySearch };
 
 function libraryShellHtml(): string {
   const noticeHtml = notice
@@ -46,6 +53,20 @@ function libraryShellHtml(): string {
          </div>
        </div>`
     : '';
+
+  // Ingredient match replaces the normal list when active — a different
+  // question deserves a different answer shape.
+  const matching = search.cookWith.trim().length > 0;
+  const visible = applyFilters(recipes, search);
+  const listHtml = matching
+    ? matchResultsHtml(ingredientMatches(recipes, search))
+    : libraryHtml(visible);
+
+  const countLabel = isSearchActive(search)
+    ? matching
+      ? 'What you can cook'
+      : `${visible.length} of ${recipes.length}`
+    : `${recipes.length} saved`;
 
   return `
     <h1>Reel Recipes</h1>
@@ -67,11 +88,13 @@ function libraryShellHtml(): string {
     ${offerHtml}
     ${noticeHtml}
 
+    ${searchPanelHtml(recipes, search)}
+
     <div class="library-head">
-      <p class="section-label">Library — ${recipes.length} saved</p>
+      <p class="section-label">Library — ${countLabel}</p>
       <button class="subtle" data-action="new-manual">+ Write one</button>
     </div>
-    ${libraryHtml(recipes)}
+    ${listHtml}
   `;
 }
 
@@ -86,21 +109,27 @@ async function render(): Promise<void> {
   }
 
   if (route.name === 'library') {
-    // Preserve what the user is typing across background refreshes.
-    const prev = app.querySelector<HTMLInputElement>('#url-input');
-    const preserved = prev
-      ? { value: prev.value, focused: document.activeElement === prev, pos: prev.selectionStart }
-      : null;
+    // Preserve what the user is typing across background refreshes — for every
+    // text field on this screen, not just the paste bar.
+    const FIELDS = ['#url-input', '#search-text', '#cook-with'];
+    const preserved = FIELDS.map((sel) => {
+      const el = app.querySelector<HTMLInputElement>(sel);
+      return el
+        ? { sel, value: el.value, focused: document.activeElement === el, pos: el.selectionStart }
+        : null;
+    });
 
     app.innerHTML = libraryShellHtml();
 
-    if (preserved) {
-      const next = app.querySelector<HTMLInputElement>('#url-input')!;
-      next.value = preserved.value;
-      if (preserved.focused) {
-        next.focus();
+    for (const p of preserved) {
+      if (!p) continue;
+      const el = app.querySelector<HTMLInputElement>(p.sel);
+      if (!el) continue;
+      el.value = p.value;
+      if (p.focused) {
+        el.focus();
         try {
-          next.setSelectionRange(preserved.pos ?? 0, preserved.pos ?? 0);
+          el.setSelectionRange(p.pos ?? 0, p.pos ?? 0);
         } catch {
           /* not selectable */
         }
@@ -119,6 +148,34 @@ async function render(): Promise<void> {
       await refresh();
       navigate(`#/edit/${r.id}`);
     });
+
+    // --- Search and filters (FR-3.2, FR-3.3, FR-3.4) ---
+    // Filter as the user types; everything is in memory so this is instant.
+    const searchInput = app.querySelector<HTMLInputElement>('#search-text');
+    searchInput?.addEventListener('input', () => {
+      search = { ...search, text: searchInput.value };
+      void render();
+    });
+
+    const cookInput = app.querySelector<HTMLInputElement>('#cook-with');
+    cookInput?.addEventListener('input', () => {
+      search = { ...search, cookWith: cookInput.value };
+      void render();
+    });
+
+    onClick(app, '[data-filter]', (el) => {
+      const key = el.dataset['filter'] as 'cuisine' | 'mealType' | 'tag';
+      const value = el.dataset['value'];
+      // Tapping an active filter clears it — one tap in, one tap out.
+      search = { ...search, [key]: search[key] === value ? undefined : value };
+      void render();
+    });
+
+    onClick(app, '[data-action="clear-filters"]', () => {
+      search = { ...emptySearch };
+      void render();
+    });
+
     return;
   }
 
@@ -132,7 +189,7 @@ async function render(): Promise<void> {
   }
 
   if (route.name === 'recipe') {
-    renderRecipe(app, r, () => void refresh());
+    renderRecipe(app, r, () => void refresh(), allTags(recipes).map((t) => t.tag));
   } else if (route.name === 'edit') {
     renderEdit(app, r, () => void refresh());
   } else {

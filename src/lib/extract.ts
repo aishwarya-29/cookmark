@@ -118,6 +118,9 @@ export interface ExtractResponse {
   steps?: string[];
   sourceLanguage?: string;
   translated?: boolean;
+  cuisine?: string;
+  mealType?: string;
+  tags?: string[];
   route?: string;
   parseError?: 'quota_exhausted' | 'parse_failed' | 'no_caption';
 }
@@ -227,6 +230,18 @@ async function runTier1(recipe: Recipe): Promise<Tier1Result> {
   if (!edited.has('ingredients')) patch.ingredients = ingredients;
   if (!edited.has('steps')) patch.steps = steps;
   if (sourceLanguage) patch.sourceLanguage = sourceLanguage;
+
+  // FR-3.7 — suggestions, never silent assignment. These sit in `suggested`
+  // until the user accepts them; a library that reorganises itself is
+  // unsettling, and a wrong auto-tag erodes trust faster than a missing one.
+  const suggested: NonNullable<Recipe['suggested']> = {};
+  if (data.cuisine && !recipe.cuisine) suggested.cuisine = data.cuisine;
+  if (data.mealType && !recipe.mealType) suggested.mealType = data.mealType;
+  const newTags = (data.tags ?? []).filter((t) => !(recipe.tags ?? []).includes(t));
+  if (newTags.length) suggested.tags = newTags;
+  if (suggested.cuisine || suggested.mealType || suggested.tags?.length) {
+    patch.suggested = suggested;
+  }
 
   patch.extractionMethod = translated ? 'audio_translated' : 'caption';
   patch.status = qualifies ? 'complete' : 'partial';

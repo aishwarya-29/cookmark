@@ -3,6 +3,7 @@ import { formatIngredient } from '../lib/quantity';
 import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes';
 import { escapeHtml, formatDate, onClick } from './dom';
 import { navigate } from './router';
+import { suggestionsHtml, categoriesHtml, bindCategoryActions } from './categorise';
 
 /**
  * Recipe detail (FR-4.1) and editing (FR-2.10).
@@ -61,7 +62,12 @@ function emptyRecipeInvitation(): string {
     </div>`;
 }
 
-export function renderRecipe(root: HTMLElement, r: Recipe, onChange: () => void): void {
+export function renderRecipe(
+  root: HTMLElement,
+  r: Recipe,
+  onChange: () => void,
+  knownTags: string[] = [],
+): void {
   const hasIngredients = (r.ingredients?.length ?? 0) > 0;
   const hasSteps = (r.steps?.length ?? 0) > 0;
   const hasContent = hasIngredients || hasSteps;
@@ -80,6 +86,9 @@ export function renderRecipe(root: HTMLElement, r: Recipe, onChange: () => void)
     <h1>${escapeHtml(r.title)}</h1>
     ${attributionHtml(r)}
     <p class="dim small">Saved ${formatDate(r.savedAt)}</p>
+
+    ${categoriesHtml(r)}
+    ${suggestionsHtml(r)}
 
     ${
       hasContent
@@ -125,6 +134,8 @@ export function renderRecipe(root: HTMLElement, r: Recipe, onChange: () => void)
       <button class="subtle danger" data-action="delete">Delete recipe</button>
     </div>
   `;
+
+  bindCategoryActions(root, r, knownTags, onChange);
 
   onClick(root, '[data-action="cook"]', () => navigate(`#/cook/${r.id}`));
   onClick(root, '[data-action="edit"]', () => navigate(`#/edit/${r.id}`));

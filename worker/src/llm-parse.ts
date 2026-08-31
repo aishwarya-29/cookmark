@@ -29,7 +29,16 @@ export interface LlmParsed {
   sourceLanguage?: string;
   /** True when the model translated the content into English. */
   translated?: boolean;
+  /**
+   * Category suggestions (FR-3.7). These are proposals for the user to accept
+   * or dismiss — never applied automatically.
+   */
+  cuisine?: string;
+  mealType?: string;
+  tags?: string[];
 }
+
+const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack', 'dessert', 'drink']);
 
 export class QuotaExhaustedError extends Error {
   constructor() {
@@ -75,7 +84,26 @@ Rules:
 - If the caption is not in English, translate ingredients and steps into
   English, and report the original language.
 - quantity must be a NUMBER when one is stated (convert ½ to 0.5, "2-3" to 2).
-  Use quantityText for non-numeric amounts like "a pinch" or "as needed".`;
+  Use quantityText for non-numeric amounts like "a pinch" or "as needed".
+
+When — and only when — you extracted a real recipe, also categorise it. These
+are suggestions the user will confirm, so a reasonable inference from the
+dish itself is wanted; what is not wanted is inventing detail the caption
+cannot support.
+- cuisine: the cooking tradition. Infer it from the dish and its ingredients —
+  a curry with garam masala and curry leaves is Indian; pasta with basil and
+  parmesan is Italian. Be specific where the dish is ("South Indian" rather
+  than "Indian") when the evidence supports it. Leave empty only if the dish
+  genuinely belongs to no identifiable tradition.
+- mealType: exactly one of breakfast, lunch, dinner, snack, dessert, drink.
+  Infer from the dish — a chicken curry is dinner, a cake is dessert. Leave
+  empty only when it could plausibly be any of them.
+- tags: 2-4 short lowercase labels describing how the dish is used —
+  "quick", "vegetarian", "one-pot", "high-protein", "party food". Base these
+  on what the caption actually says. Do not tag "vegetarian" unless the
+  ingredients really are. Do not repeat the cuisine or meal type as a tag.
+
+If the caption contains no recipe, return empty arrays and no categories.`;
 
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -101,8 +129,22 @@ const RESPONSE_SCHEMA = {
       },
     },
     steps: { type: 'array', items: { type: 'string' } },
+    cuisine: {
+      type: 'string',
+      description:
+        'Cooking tradition inferred from the dish, e.g. "South Indian", "Italian". Empty string only if the dish belongs to no identifiable tradition.',
+    },
+    mealType: {
+      type: 'string',
+      enum: ['breakfast', 'lunch', 'dinner', 'snack', 'dessert', 'drink', ''],
+      description: 'Inferred from the dish. Empty string only if genuinely ambiguous.',
+    },
+    tags: { type: 'array', items: { type: 'string' } },
   },
-  required: ['ingredients', 'steps'],
+  // cuisine and mealType are required so the model commits to a judgement
+  // rather than silently omitting the field; an empty string is its escape
+  // hatch, and validateAgainstCaption drops both when there is no recipe.
+  required: ['ingredients', 'steps', 'cuisine', 'mealType', 'tags'],
 } as const;
 
 /** Ai binding shape, narrowed to what we use. */
@@ -144,10 +186,35 @@ function validateAgainstCaption(parsed: LlmParsed, caption: string): LlmParsed {
     return { ingredients: [], steps: [] };
   }
 
+  // Categories ride on the recipe: if there is no recipe, there is nothing to
+  // categorise, and suggesting a cuisine for a hashtag wall would be invention.
+  const hasRecipe = ingredients.length > 0 || steps.length > 0;
+  const mealType =
+    hasRecipe && parsed.mealType && MEAL_TYPES.has(parsed.mealType.toLowerCase())
+      ? parsed.mealType.toLowerCase()
+      : undefined;
+  const cuisine =
+    hasRecipe && parsed.cuisine && parsed.cuisine.length <= 30 ? parsed.cuisine : undefined;
+  const tags = hasRecipe
+    ? [
+        ...new Set(
+          (parsed.tags ?? [])
+            .filter((t) => typeof t === 'string')
+            .map((t) => t.toLowerCase().trim())
+            .filter((t) => t.length >= 2 && t.length <= 24)
+            // Don't duplicate the cuisine or meal type as a tag.
+            .filter((t) => t !== cuisine?.toLowerCase() && t !== mealType),
+        ),
+      ].slice(0, 4)
+    : [];
+
   return {
     ...(parsed.title ? { title: parsed.title } : {}),
     ...(parsed.sourceLanguage ? { sourceLanguage: parsed.sourceLanguage } : {}),
     ...(parsed.translated ? { translated: parsed.translated } : {}),
+    ...(cuisine ? { cuisine } : {}),
+    ...(mealType ? { mealType } : {}),
+    ...(tags.length ? { tags } : {}),
     ingredients,
     steps,
   };
@@ -205,6 +272,9 @@ export async function parseCaptionWithLlm(
   if (!obj || typeof obj !== 'object') return { ingredients: [], steps: [] };
 
   const parsed: LlmParsed = {
+    ...(typeof obj['cuisine'] === 'string' && obj['cuisine'] ? { cuisine: obj['cuisine'] } : {}),
+    ...(typeof obj['mealType'] === 'string' && obj['mealType'] ? { mealType: obj['mealType'] } : {}),
+    ...(Array.isArray(obj['tags']) ? { tags: obj['tags'] as string[] } : {}),
     ...(typeof obj['title'] === 'string' && obj['title'] ? { title: obj['title'] } : {}),
     ...(typeof obj['sourceLanguage'] === 'string' && obj['sourceLanguage']
       ? { sourceLanguage: obj['sourceLanguage'] }

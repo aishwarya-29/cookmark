@@ -99,6 +99,24 @@ export interface Recipe {
   mealType?: string;
   tags?: string[];
 
+  /**
+   * Auto-suggested categories awaiting the user's decision (FR-3.7). Kept
+   * separate from the accepted fields above so nothing is ever silently
+   * assigned — the user accepts or dismisses these explicitly.
+   */
+  suggested?: {
+    cuisine?: string;
+    mealType?: string;
+    tags?: string[];
+  };
+
+  /**
+   * Normalised ingredient names for search (FR-3.4), derived from
+   * ingredients[] on every write. Stored rather than computed at query time so
+   * a multi-keyword lookup stays fast as the library grows.
+   */
+  searchTerms?: string[];
+
   /** Unparsed caption, kept verbatim. Tier 3 keeps this even when parsing fails. */
   rawCaption?: string;
 

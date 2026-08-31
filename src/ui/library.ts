@@ -87,6 +87,16 @@ function cardHtml(r: Recipe): string {
       </div>
       ${counts.length ? `<p class="dim small">${counts.join(' · ')}</p>` : ''}
       ${
+        r.cuisine || r.mealType || r.tags?.length
+          ? `<div class="chip-row">
+               ${[r.cuisine, r.mealType, ...(r.tags ?? [])]
+                 .filter(Boolean)
+                 .map((c) => `<span class="chip small-chip">${escapeHtml(c!)}</span>`)
+                 .join('')}
+             </div>`
+          : ''
+      }
+      ${
         isManual(r)
           ? ''
           : `<div class="card-meta">

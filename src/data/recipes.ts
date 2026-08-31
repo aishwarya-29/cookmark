@@ -2,6 +2,7 @@ import type { ReelRecipesDb } from './db';
 import { db as defaultDb } from './db';
 import type { Recipe } from './types';
 import { canonicaliseInstagramUrl, type CanonicalUrl } from '../lib/url';
+import { recipeSearchTerms } from '../lib/ingredient-terms';
 
 /**
  * The save path — PRD NFR-3.1, the product's fundamental promise.
@@ -139,5 +140,13 @@ export async function updateRecipe(
   changes: Partial<Recipe>,
   db: ReelRecipesDb = defaultDb,
 ): Promise<void> {
-  await db.recipes.update(id, { ...changes, updatedAt: Date.now() });
+  const patch: Partial<Recipe> = { ...changes, updatedAt: Date.now() };
+
+  // Derive search terms here rather than at every call site, so the search
+  // index can never drift out of sync with the ingredients (FR-3.4).
+  if (changes.ingredients) {
+    patch.searchTerms = recipeSearchTerms(changes.ingredients);
+  }
+
+  await db.recipes.update(id, patch);
 }
