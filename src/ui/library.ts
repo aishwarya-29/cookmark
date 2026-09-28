@@ -1,6 +1,7 @@
 import type { Recipe } from '../data/types';
 import { isManual } from '../data/recipes';
 import { escapeHtml, formatDate } from './dom';
+import { thumbSrc, isCached } from '../lib/thumbnail';
 
 /**
  * Library list (FR-3.1).
@@ -84,17 +85,22 @@ function cardHtml(r: Recipe): string {
   // The thumbnail is the content: you remember reels as "the one with the
   // orange sauce". Lazy so a long library doesn't fetch everything at once,
   // and the card degrades cleanly when it's missing (private post, offline).
-  const thumb = r.thumbnailUrl
+  // Cached bytes win over the remote URL — see thumbSrc. `loading="lazy"` is
+  // only safe for the remote URL: on a cached image it would defer a swap that
+  // has already happened, leaving the tile blank until scrolled into view.
+  const src = thumbSrc(r);
+  const cached = isCached(r.id);
+  const thumb = src
     ? `<a class="card-thumb" href="#/recipe/${r.id}" tabindex="-1" aria-hidden="true">
-         <img src="${escapeHtml(r.thumbnailUrl)}" alt="" loading="lazy"
+         <img src="${escapeHtml(src)}" alt=""${cached ? '' : ' loading="lazy"'}
               data-thumb-for="${r.id}"
               referrerpolicy="no-referrer"
-              onerror="this.closest('.card-thumb').remove()" />
+              onerror="this.closest('.card-thumb').classList.add('broken')" />
        </a>`
     : '';
 
   return `
-    <li class="card ${r.thumbnailUrl ? 'has-thumb' : ''}">
+    <li class="card ${src ? 'has-thumb' : ''}">
       ${thumb}
       <a class="card-link" href="#/recipe/${r.id}">
         <p class="card-title">${escapeHtml(r.title)}</p>

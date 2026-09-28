@@ -537,5 +537,7 @@ void preloadThumbnails().then(() => refresh()).then(async () => {
   await processQueue(undefined, () => void refresh());
   await refresh();
   // Repair libraries saved before caching existed, and retry any that failed.
-  if (await backfillThumbnails()) await refresh();
+  // Re-render as each image lands rather than only at the end: the sweep now
+  // covers the whole backlog, which can take a while on a large library.
+  await backfillThumbnails(undefined, () => void refresh());
 });

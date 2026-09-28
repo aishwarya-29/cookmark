@@ -874,7 +874,9 @@ button.chip:hover {
 /*
  * The glyph sits under the cover image, so it shows through when there is no
  * image and is simply covered when there is. No :has() and no JS needed —
- * a broken image adds .no-image, which hides the <img> and reveals it again.
+ * a broken image adds .broken, which hides the <img> and reveals it again.
+ * (.broken rather than a per-view name, so hydration can clear it uniformly
+ * once cached bytes arrive.)
  */
 .folder-glyph {
   position: relative;
@@ -886,8 +888,23 @@ button.chip:hover {
   width: 100%;
   height: 100%;
 }
-.folder-cover.no-image img {
+.folder-cover.broken img {
   display: none;
+}
+
+/*
+ * A card whose thumbnail failed collapses the image away and lets the text
+ * take the full width, rather than leaving a torn-image placeholder. The tile
+ * used to remove() itself here, which raced the cached-bytes swap and often
+ * deleted an image that was about to work.
+ */
+.card-thumb.broken {
+  display: none;
+}
+/* With the image gone, the card needs its top padding back — .has-thumb
+   removes it on the assumption that an image is flush against the edge. */
+.card.has-thumb:has(.card-thumb.broken) {
+  padding-top: 15px;
 }
 
 /* "All recipes" is a view, not a collection — mark it as the odd one out. */

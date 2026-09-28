@@ -63,10 +63,33 @@ export async function cacheThumbnail(
 const objectUrls = new Map<string, string>();
 
 /**
+ * The URL a view should render for a recipe's thumbnail, or undefined for none.
+ *
+ * ALWAYS prefer the cached blob. Rendering Instagram's URL and swapping it for
+ * the cached copy afterwards looked equivalent but was not: the browser starts
+ * fetching the moment the HTML lands, so an expired URL raced the swap and the
+ * error handler frequently won. Putting the right URL in the initial markup
+ * removes the race rather than trying to win it.
+ *
+ * The remote URL stays as the fallback for recipes not cached yet — it works
+ * for about four days, which is usually long enough for the backfill to catch
+ * up.
+ */
+export function thumbSrc(r: { id: string; thumbnailUrl?: string }): string | undefined {
+  return objectUrls.get(r.id) ?? r.thumbnailUrl;
+}
+
+/** True when we hold local bytes, so the img needs no crossorigin dance. */
+export function isCached(recipeId: string): boolean {
+  return objectUrls.has(recipeId);
+}
+
+/**
  * Swap in cached bytes for any `<img data-thumb-for="<recipeId>">` on screen.
  *
- * Done after render rather than during it, so views stay pure string builders
- * and object-URL lifetimes live in exactly one place.
+ * With {@link thumbSrc} in the views this is now a repair pass rather than the
+ * primary path: it covers thumbnails that finished caching after the current
+ * render, and clears the `broken` marker on images that failed earlier.
  */
 export function hydrateThumbnails(root: ParentNode, db: ReelRecipesDb = defaultDb): void {
   const imgs = [...root.querySelectorAll<HTMLImageElement>('img[data-thumb-for]')];
@@ -81,7 +104,16 @@ export function hydrateThumbnails(root: ParentNode, db: ReelRecipesDb = defaultD
     if (!id) continue;
     const url = objectUrls.get(id);
     if (url) {
-      if (img.src !== url) img.src = url;
+      if (img.src !== url) {
+        // A lazy image below the fold may not have loaded the remote URL yet;
+        // pointing it at local bytes means it never will. Drop the attribute
+        // so the swap takes effect immediately rather than on scroll.
+        img.removeAttribute('loading');
+        img.src = url;
+      }
+      // The remote URL may have failed before the bytes arrived. Local bytes
+      // cannot 403, so clear the marker and let it render.
+      clearBroken(img);
     } else {
       missing.push(id);
     }
@@ -100,6 +132,11 @@ export function hydrateThumbnails(root: ParentNode, db: ReelRecipesDb = defaultD
     }
     if (added) hydrateThumbnails(root, db);
   });
+}
+
+/** Undo the `broken` marker its container picked up from a failed load. */
+function clearBroken(img: HTMLImageElement): void {
+  img.closest('.hero, .folder-cover, .card-thumb')?.classList.remove('broken');
 }
 
 /**
@@ -129,21 +166,44 @@ export function releaseThumbnail(recipeId: string): void {
  * Cache thumbnails for recipes that have a URL but no bytes yet.
  *
  * Run on startup so a library saved before caching existed is repaired, and
- * so an image that failed to cache once gets another chance. Sequential and
- * capped: this is background housekeeping, not something worth saturating a
- * phone's connection for.
+ * so an image that failed to cache once gets another chance. Sequential: this
+ * is background housekeeping, not something worth saturating a phone's
+ * connection for.
+ *
+ * It works through the WHOLE backlog rather than a fixed slice. A per-launch
+ * cap of a dozen sounded prudent but quietly lost images: a URL only lives
+ * about four days, so anything beyond the cap could expire before enough
+ * launches had happened to reach it. Oldest first, because those are the
+ * closest to expiring.
+ *
+ * `onProgress` fires after each success so the caller can re-render as images
+ * land instead of waiting for the whole sweep.
  */
 export async function backfillThumbnails(
   db: ReelRecipesDb = defaultDb,
-  limit = 12,
+  onProgress?: () => void,
 ): Promise<number> {
   const pending = (await db.recipes.toArray())
     .filter((r) => r.thumbnailUrl && !r.thumbnailBlob)
-    .slice(0, limit);
+    .sort((a, b) => a.savedAt - b.savedAt);
 
   let cached = 0;
+  let consecutiveFailures = 0;
   for (const r of pending) {
-    if (await cacheThumbnail(r.id, r.thumbnailUrl!, db)) cached++;
+    if (await cacheThumbnail(r.id, r.thumbnailUrl!, db)) {
+      cached++;
+      consecutiveFailures = 0;
+      // Publish the bytes immediately so the next render picks them up.
+      const row = await db.recipes.get(r.id);
+      if (row?.thumbnailBlob && !objectUrls.has(r.id)) {
+        objectUrls.set(r.id, URL.createObjectURL(row.thumbnailBlob));
+      }
+      onProgress?.();
+    } else if (++consecutiveFailures >= 5) {
+      // Five in a row means offline or rate limited, not five dead URLs.
+      // Stop and let the next launch try again rather than hammering.
+      break;
+    }
   }
   return cached;
 }

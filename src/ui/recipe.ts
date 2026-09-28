@@ -4,6 +4,7 @@ import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes
 import { escapeHtml, formatDate, onClick } from './dom';
 import { navigate, navigateReplacing } from './router';
 import { reExtract } from '../lib/extract';
+import { thumbSrc } from '../lib/thumbnail';
 import { suggestionsHtml, categoriesHtml, bindCategoryActions, collectionsRowHtml } from './categorise';
 
 /**
@@ -119,9 +120,11 @@ export function renderRecipe(
 
   // Full-bleed hero: the reel's own thumbnail, with the title overlaid on a
   // gradient so it stays legible over any image.
-  const hero = r.thumbnailUrl
+  // Cached bytes win over the remote URL — see thumbSrc.
+  const heroSrc = thumbSrc(r);
+  const hero = heroSrc
     ? `<div class="hero">
-         <img src="${escapeHtml(r.thumbnailUrl)}" alt="" referrerpolicy="no-referrer"
+         <img src="${escapeHtml(heroSrc)}" alt="" referrerpolicy="no-referrer"
               data-thumb-for="${r.id}"
               onerror="this.closest('.hero').classList.add('broken')" />
          <div class="hero-fade"></div>

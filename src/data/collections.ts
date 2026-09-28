@@ -134,12 +134,23 @@ export function recipesIn(collection: Collection, all: Recipe[]): Recipe[] {
  * having to pick one.
  */
 export function coverFor(collection: Collection, all: Recipe[]): string | undefined {
+  return coverRecipeFor(collection, all)?.thumbnailUrl;
+}
+
+/**
+ * The recipe whose image fronts the folder.
+ *
+ * Callers need the recipe itself, not just its URL: rendering a thumbnail
+ * means consulting the local blob cache first (see `thumbSrc`), which is keyed
+ * by recipe id. Deriving {@link coverFor} from this keeps one selection rule.
+ */
+export function coverRecipeFor(collection: Collection, all: Recipe[]): Recipe | undefined {
   const members = recipesIn(collection, all);
   if (collection.coverRecipeId) {
     const chosen = members.find((r) => r.id === collection.coverRecipeId);
-    if (chosen?.thumbnailUrl) return chosen.thumbnailUrl;
+    if (chosen?.thumbnailUrl) return chosen;
   }
-  return [...members].reverse().find((r) => r.thumbnailUrl)?.thumbnailUrl;
+  return [...members].reverse().find((r) => r.thumbnailUrl);
 }
 
 /** Which collections a recipe belongs to — for the detail view. */

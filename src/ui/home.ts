@@ -1,6 +1,7 @@
 import type { Recipe, Collection } from '../data/types';
-import { coverFor, recipesIn } from '../data/collections';
+import { coverRecipeFor, recipesIn } from '../data/collections';
 import { escapeHtml } from './dom';
+import { thumbSrc, isCached } from '../lib/thumbnail';
 
 /**
  * Home — a grid of collection folders, in the spirit of Instagram's Saved
@@ -16,21 +17,26 @@ function folderTile(opts: {
   href: string;
   name: string;
   count: number;
-  cover?: string;
-  coverRecipeId?: string;
+  /** The recipe whose image fronts the folder, if any has one. */
+  cover?: Recipe;
   pinned?: boolean;
 }): string {
   const label = `${opts.count} ${opts.count === 1 ? 'recipe' : 'recipes'}`;
+  // Cached bytes win over the remote URL — see thumbSrc. `loading="lazy"` is
+  // only safe for the remote URL; on a cached image it would defer a swap that
+  // has already happened.
+  const src = opts.cover ? thumbSrc(opts.cover) : undefined;
+  const cached = opts.cover ? isCached(opts.cover.id) : false;
 
   return `
     <a class="folder ${opts.pinned ? 'pinned' : ''}" href="${escapeHtml(opts.href)}">
       <div class="folder-cover">
         ${
-          opts.cover
-            ? `<img src="${escapeHtml(opts.cover)}" alt="" loading="lazy"
-                    ${opts.coverRecipeId ? `data-thumb-for="${opts.coverRecipeId}"` : ''}
+          src
+            ? `<img src="${escapeHtml(src)}" alt=""${cached ? '' : ' loading="lazy"'}
+                    data-thumb-for="${opts.cover!.id}"
                     referrerpolicy="no-referrer"
-                    onerror="this.closest('.folder-cover').classList.add('no-image')" />`
+                    onerror="this.closest('.folder-cover').classList.add('broken')" />`
             : ''
         }
         <div class="folder-glyph" aria-hidden="true">
@@ -72,8 +78,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
       href: '#/all',
       name: 'All recipes',
       count: recipes.length,
-      cover: recipes.find((r) => r.thumbnailUrl)?.thumbnailUrl,
-      coverRecipeId: recipes.find((r) => r.thumbnailUrl)?.id,
+      cover: recipes.find((r) => r.thumbnailUrl),
       pinned: true,
     }),
     ...collections.map((c) =>
@@ -81,8 +86,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
         href: `#/collection/${c.id}`,
         name: c.name,
         count: recipesIn(c, recipes).length,
-        cover: coverFor(c, recipes),
-        coverRecipeId: [...recipesIn(c, recipes)].reverse().find((r) => r.thumbnailUrl)?.id,
+        cover: coverRecipeFor(c, recipes),
       }),
     ),
   ];
@@ -94,8 +98,7 @@ export function homeHtml(recipes: Recipe[], collections: Collection[]): string {
         href: '#/unfiled',
         name: 'Not in a collection',
         count: unfiled.length,
-        cover: unfiled.find((r) => r.thumbnailUrl)?.thumbnailUrl,
-        coverRecipeId: unfiled.find((r) => r.thumbnailUrl)?.id,
+        cover: unfiled.find((r) => r.thumbnailUrl),
       }),
     );
   }
