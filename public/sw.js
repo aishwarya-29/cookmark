@@ -15,7 +15,17 @@
  * already local and already offline.
  */
 
-const VERSION = 'v2';
+/*
+ * BUMP THIS ON EVERY DEPLOY THAT CHANGES THE BUNDLES.
+ *
+ * sw.js ships unhashed, so the browser installs a new worker only when these
+ * bytes change. Leave the version alone and the old worker stays active: the
+ * app still loads online (navigations are network-first, and the fresh
+ * index.html names new hashed bundles), but precacheAssets never re-runs, so
+ * SHELL_CACHE keeps pointing at the PREVIOUS build's assets — which are gone
+ * from the server. Offline would then open a blank page.
+ */
+const VERSION = 'v3';
 const SHELL_CACHE = `reel-recipes-shell-${VERSION}`;
 const IMAGE_CACHE = `reel-recipes-images-${VERSION}`;
 
