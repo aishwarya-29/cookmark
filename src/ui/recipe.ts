@@ -1,5 +1,6 @@
-import type { Recipe, Ingredient, Collection } from '../data/types';
+import type { Recipe, Collection } from '../data/types';
 import { formatIngredient } from '../lib/quantity';
+import { ingredientsToText, textToIngredients } from '../lib/ingredient-text';
 import { getRecipe, updateRecipe, deleteRecipe, isManual } from '../data/recipes';
 import { escapeHtml, formatDate, onClick } from './dom';
 import { navigate, navigateReplacing } from './router';
@@ -14,26 +15,6 @@ import { suggestionsHtml, categoriesHtml, bindCategoryActions, collectionsRowHtm
  * link-only entries, which is exactly where it matters most, because the link
  * back to the reel is the only content there is.
  */
-
-/** Ingredients as editable text — one per line, the format people paste. */
-function ingredientsToText(list: Ingredient[] | undefined): string {
-  return (list ?? []).map(formatIngredient).join('\n');
-}
-
-/**
- * Parse the ingredient textarea back into structured rows.
- *
- * Intentionally shallow: it stores the whole line as `item`. Real quantity and
- * unit parsing arrives with the caption parser in Step 4, and will be shared
- * with this path rather than duplicated.
- */
-function textToIngredients(text: string): Ingredient[] {
-  return text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => ({ item: line }));
-}
 
 function attributionHtml(r: Recipe): string {
   if (isManual(r)) {
