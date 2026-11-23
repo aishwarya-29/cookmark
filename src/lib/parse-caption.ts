@@ -21,7 +21,17 @@ export interface ParsedCaption {
 }
 
 /** Bullet glyphs seen in real captions, plus plain hyphen/asterisk. */
-const BULLET_RE = /^[\s]*(?:[-–—*•·▪️▫️◾️◽️🔸🔹🔺🔻➤➡️👉✅✔️☑️➕|]|\d+[.)])\s*/u;
+/**
+ * Leading list markers, stripped before parsing.
+ *
+ * The `\d+[.)]` alternative needs its lookahead. Without it the numbered-list
+ * branch ate the whole-number part of every decimal quantity: "1.5 eggs"
+ * became "5 eggs", and "1.25 kg lamb" became "25 kg lamb" — a tenfold error
+ * written silently into the library. A list marker is followed by whitespace
+ * or a letter ("1. Chop", "1.Chop"); a decimal point is followed by a digit.
+ */
+const BULLET_RE =
+  /^[\s]*(?:[-–—*•·▪️▫️◾️◽️🔸🔹🔺🔻➤➡️👉✅✔️☑️➕|]\s*|\d+[.)](?=\s|\D|$)\s*)/u;
 
 /**
  * Section headings. The trailing `[-–—:\s]*` matters: real captions write
@@ -131,7 +141,11 @@ export function parseIngredientLine(raw: string): Ingredient | null {
   if (dashSplit) {
     const left = dashSplit[1]!.trim();
     const right = dashSplit[2]!.trim();
-    const qtyMatch = right.match(/^([\d½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞./\s-]+)\s*(.*)$/u);
+    // En and em dashes belong in the class too: "Water – 2–3 tbsp" splits at
+    // the first dash, so the range lands here and must be captured whole. Left
+    // out, the capture stopped at "2" and the leftover "–3 tbsp" no longer
+    // matched UNIT_RE, silently dropping the unit.
+    const qtyMatch = right.match(/^([\d½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞./\s\-–—]+)\s*(.*)$/u);
     if (qtyMatch) {
       const quantity = parseQuantity(qtyMatch[1]!);
       const rest = qtyMatch[2]!.trim();
@@ -155,7 +169,11 @@ export function parseIngredientLine(raw: string): Ingredient | null {
   }
 
   // --- Quantity-first: "500 gm chicken", "1 tbsp ginger garlic paste" ---
-  const qtyFirst = line.match(/^([\d½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+(?:[./\s-]\d+)*)\s*(.*)$/u);
+  // The separator class carries en and em dashes as well as the hyphen, so a
+  // range typed as "2–3 tbsp" is captured whole. parseQuantity already accepts
+  // all three; without them here the capture stopped at "2" and the remainder
+  // ("–3 tbsp oil") was taken as the item name.
+  const qtyFirst = line.match(/^([\d½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+(?:[./\s\-–—]\d+)*)\s*(.*)$/u);
   if (qtyFirst) {
     const quantity = parseQuantity(qtyFirst[1]!);
     let rest = qtyFirst[2]!.trim();

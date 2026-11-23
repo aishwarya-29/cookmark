@@ -265,3 +265,90 @@ describe('parseIngredientLine', () => {
     expect(parseIngredientLine('   ')).toBeNull();
   });
 });
+
+/**
+ * Decimal quantities, which the bullet stripper used to destroy.
+ *
+ * BULLET_RE strips numbered-list markers ("1.", "2)"), and its `\d+[.)]`
+ * alternative matched the start of every decimal: "1.5 eggs" became "5 eggs"
+ * and "1.25 kg lamb" became "25 kg lamb" — a tenfold error written silently
+ * into the library and invisible until something multiplied it.
+ *
+ * It survived 35 existing tests because the suite only ever exercised vulgar
+ * fractions ("1 1/2"), which is how Indian captions usually write amounts.
+ */
+describe('decimal quantities are not eaten by the bullet stripper', () => {
+  it('keeps the whole-number part of a decimal', () => {
+    expect(parseIngredientLine('1.5 eggs')?.quantity).toBe(1.5);
+    expect(parseIngredientLine('2.5 cups flour')?.quantity).toBe(2.5);
+    expect(parseIngredientLine('0.5 tsp salt')?.quantity).toBe(0.5);
+  });
+
+  it('keeps both digits of a two-decimal amount', () => {
+    expect(parseIngredientLine('1.25 kg lamb')).toMatchObject({
+      quantity: 1.25,
+      unit: 'kg',
+      item: 'lamb',
+    });
+  });
+
+  it('does not mistake a decimal for a list marker before a unit', () => {
+    expect(parseIngredientLine('3.5 litres stock')).toMatchObject({
+      quantity: 3.5,
+      item: 'stock',
+    });
+  });
+
+  it('still strips genuine numbered-list markers', () => {
+    // These are the markers the stripper exists for, and they must keep working:
+    // a marker is followed by whitespace or a letter, a decimal point by a digit.
+    expect(parseIngredientLine('1. Chop the onion')?.item).toBe('Chop the onion');
+    expect(parseIngredientLine('2) Add water')?.item).toBe('Add water');
+    expect(parseIngredientLine('10. Serve hot')?.item).toBe('Serve hot');
+    expect(parseIngredientLine('1.Chop onion')?.item).toBe('Chop onion');
+  });
+
+  it('leaves a plain integer alone', () => {
+    expect(parseIngredientLine('12 eggs')?.quantity).toBe(12);
+  });
+});
+
+/**
+ * En and em dashes. Captions use them interchangeably with the hyphen, and
+ * parseQuantity always accepted all three — but the capture classes that feed
+ * it did not, so "2–3 tbsp oil" stopped at "2" and left "–3 tbsp oil" as the
+ * item name.
+ */
+describe('ranges written with en and em dashes', () => {
+  it('reads a range typed with an en dash', () => {
+    expect(parseIngredientLine('2–3 tbsp oil')).toMatchObject({
+      quantity: 2,
+      unit: 'tbsp',
+      item: 'oil',
+    });
+  });
+
+  it('reads a range typed with an em dash', () => {
+    expect(parseIngredientLine('2—3 tbsp oil')).toMatchObject({
+      quantity: 2,
+      unit: 'tbsp',
+      item: 'oil',
+    });
+  });
+
+  it('keeps the unit when a range follows an item-first dash', () => {
+    // "Water – 2–3 tbsp (to grind)" splits at the FIRST dash, so the range
+    // lands on the right-hand side and must be captured whole. Previously the
+    // unit was silently dropped.
+    expect(parseIngredientLine('Water – 2–3 tbsp (to grind)')).toMatchObject({
+      quantity: 2,
+      unit: 'tbsp',
+      item: 'Water',
+      note: 'to grind',
+    });
+  });
+
+  it('still reads a hyphen range', () => {
+    expect(parseIngredientLine('2-3 tbsp oil')?.quantity).toBe(2);
+  });
+});
